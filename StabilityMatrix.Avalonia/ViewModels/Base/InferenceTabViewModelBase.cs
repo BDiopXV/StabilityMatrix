@@ -205,6 +205,8 @@ public abstract partial class InferenceTabViewModelBase
     private void LoadImageMetadata(
         string imageFilePath,
         (
+            string? POSprompt,
+            string? NEGprompt,
             string? Parameters,
             string? ParametersJson,
             string? SMProject,

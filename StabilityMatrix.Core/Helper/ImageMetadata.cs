@@ -7,6 +7,8 @@ using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Png;
 using MetadataExtractor.Formats.WebP;
+using Microsoft.Extensions.Logging;
+using NLog;
 using StabilityMatrix.Core.Extensions;
 using StabilityMatrix.Core.Models;
 using StabilityMatrix.Core.Models.FileInterfaces;
@@ -18,6 +20,7 @@ public class ImageMetadata
 {
     private IReadOnlyList<Directory>? Directories { get; set; }
 
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private static readonly byte[] PngHeader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     private static readonly byte[] Idat = "IDAT"u8.ToArray();
     private static readonly byte[] Text = "tEXt"u8.ToArray();
@@ -75,6 +78,8 @@ public class ImageMetadata
     }
 
     public static (
+        string? POSprompt,
+        string? NEGprompt,
         string? Parameters,
         string? ParametersJson,
         string? SMProject,
@@ -87,7 +92,7 @@ public class ImageMetadata
             var paramsJson = ReadTextChunkFromWebp(filePath, ExifDirectoryBase.TagImageDescription);
             var smProj = ReadTextChunkFromWebp(filePath, ExifDirectoryBase.TagSoftware);
 
-            return (null, paramsJson, smProj, null, null);
+            return (null, null, null, paramsJson, smProj, null, null);
         }
 
         if (
@@ -100,11 +105,30 @@ public class ImageMetadata
             var bytes = userComment.Interoperability.Data.Skip(8).ToArray();
             var userCommentString = Encoding.BigEndianUnicode.GetString(bytes);
 
-            return (null, null, null, null, userCommentString);
+            return (null, null, null, null, null, null, userCommentString);
         }
 
         using var stream = filePath.Info.OpenRead();
         using var reader = new BinaryReader(stream);
+
+        var promptJSON = ReadTextChunk(reader, "prompt");
+
+        var prompt = System.Text.Json.JsonDocument.Parse(promptJSON).RootElement;
+
+        string POS_promptText = prompt
+            .GetProperty("PositiveCLIP_Base")
+            .GetProperty("inputs")
+            .GetProperty("text")
+            .GetString();
+
+        string NEG_promptText = prompt
+            .GetProperty("NegativeCLIP_Base")
+            .GetProperty("inputs")
+            .GetProperty("text")
+            .GetString();
+
+        Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+        Logger.Info("Loaded Image metadata Positive'{Meta}'", NEG_promptText);
 
         var parameters = ReadTextChunk(reader, "parameters");
         var parametersJson = ReadTextChunk(reader, "parameters-json");
@@ -113,6 +137,8 @@ public class ImageMetadata
         var civitParameters = ReadTextChunk(reader, "user_comment");
 
         return (
+            string.IsNullOrEmpty(POS_promptText) ? null : POS_promptText,
+            string.IsNullOrEmpty(NEG_promptText) ? null : NEG_promptText,
             string.IsNullOrEmpty(parameters) ? null : parameters,
             string.IsNullOrEmpty(parametersJson) ? null : parametersJson,
             string.IsNullOrEmpty(smProject) ? null : smProject,

@@ -1,6 +1,9 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using DynamicData.Tests;
 using MetadataExtractor.Formats.Exif;
+using Microsoft.Extensions.Logging;
+using NLog;
 using SkiaSharp;
 using StabilityMatrix.Core.Helper;
 using StabilityMatrix.Core.Models.FileInterfaces;
@@ -51,7 +54,11 @@ public record LocalImageFile
     /// </summary>
     public string FileNameWithoutExtension => Path.GetFileNameWithoutExtension(AbsolutePath);
 
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
     public (
+        string? POSprompt,
+        string? NEGprompt,
         string? Parameters,
         string? ParametersJson,
         string? SMProject,
@@ -67,11 +74,30 @@ public record LocalImageFile
             );
             var smProj = ImageMetadata.ReadTextChunkFromWebp(AbsolutePath, ExifDirectoryBase.TagSoftware);
 
-            return (null, paramsJson, smProj, null, null);
+            return (null, null, null, paramsJson, smProj, null, null);
         }
 
         using var stream = new FileStream(AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var reader = new BinaryReader(stream);
+
+        var promptJSON = ImageMetadata.ReadTextChunk(reader, "prompt");
+
+        var prompt = System.Text.Json.JsonDocument.Parse(promptJSON).RootElement;
+
+        var POS_promptText = prompt
+            .GetProperty("PositiveCLIP_Base")
+            .GetProperty("inputs")
+            .GetProperty("text")
+            .GetString();
+
+        var NEG_promptText = prompt
+            .GetProperty("NegativeCLIP_Base")
+            .GetProperty("inputs")
+            .GetProperty("text")
+            .GetString();
+
+        Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+        Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
 
         var parameters = ImageMetadata.ReadTextChunk(reader, "parameters");
         var parametersJson = ImageMetadata.ReadTextChunk(reader, "parameters-json");
@@ -80,6 +106,8 @@ public record LocalImageFile
         var civitParameters = ImageMetadata.ReadTextChunk(reader, "user_comment");
 
         return (
+            string.IsNullOrEmpty(POS_promptText) ? null : POS_promptText,
+            string.IsNullOrEmpty(NEG_promptText) ? null : NEG_promptText,
             string.IsNullOrEmpty(parameters) ? null : parameters,
             string.IsNullOrEmpty(parametersJson) ? null : parametersJson,
             string.IsNullOrEmpty(smProject) ? null : smProject,
@@ -135,11 +163,40 @@ public record LocalImageFile
 
             var metadata = ImageMetadata.ReadTextChunk(reader, "parameters-json");
 
+            var promptJSON = ImageMetadata.ReadTextChunk(reader, "prompt");
+
+            var prompt = System.Text.Json.JsonDocument.Parse(promptJSON).RootElement;
+
+            var POS_promptText = prompt
+                .GetProperty("PositiveCLIP_Base")
+                .GetProperty("inputs")
+                .GetProperty("text")
+                .GetString();
+
+            var NEG_promptText = prompt
+                .GetProperty("NegativeCLIP_Base")
+                .GetProperty("inputs")
+                .GetProperty("text")
+                .GetString();
+
+            Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+            Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
+
+            // Parse as mutable JSON
+            var root = JsonNode.Parse(metadata)!;
+
+            // Replace the value
+            root["PositivePrompt"] = POS_promptText;
+            root["NegativePrompt"] = NEG_promptText;
+
+            // Serialize back (pretty-printed)
+            string output_metadata = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+
             GenerationParameters? genParams;
 
-            if (!string.IsNullOrWhiteSpace(metadata))
+            if (!string.IsNullOrWhiteSpace(output_metadata))
             {
-                genParams = JsonSerializer.Deserialize<GenerationParameters>(metadata);
+                genParams = JsonSerializer.Deserialize<GenerationParameters>(output_metadata);
             }
             else
             {
