@@ -12,7 +12,9 @@
     x:DataType="vmInference:ExtraNetworkCardViewModel">
     <Design.PreviewWith>
         <StackPanel Width="400" Height="400">
-            <controls:ExtraNetworkCard DataContext="{x:Static mocks:DesignData.ExtraNetworkCardViewModel}" />
+            <StackPanel Width="400" Height="400">
+                <controls:ExtraNetworkCard DataContext="{x:Static mocks:DesignData.ExtraNetworkCardViewModel}" />
+            </StackPanel>
         </StackPanel>
     </Design.PreviewWith>
 

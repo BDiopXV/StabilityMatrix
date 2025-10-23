@@ -18,8 +18,13 @@
                 Width="400"
                 VerticalAlignment="Center"
                 Spacing="32">
-                <controls:ModelCard DataContext="{x:Static mocks:DesignData.ModelCardViewModel}" />
-                <controls:ModelCard DataContext="{x:Static mocks:DesignData.ImgToVidModelCardViewModel}" />
+                <StackPanel
+                    Width="400"
+                    VerticalAlignment="Center"
+                    Spacing="32">
+                    <controls:ModelCard DataContext="{x:Static mocks:DesignData.ModelCardViewModel}" />
+                    <controls:ModelCard DataContext="{x:Static mocks:DesignData.ImgToVidModelCardViewModel}" />
+                </StackPanel>
             </StackPanel>
         </Panel>
     </Design.PreviewWith>
@@ -392,8 +397,22 @@
                             Grid.Row="12"
                             Grid.Column="0"
                             Grid.ColumnSpan="3"
+                            Margin="0,8,0,0"
+                            VerticalAlignment="Center"
                             IsVisible="{Binding IsExtraNetworksEnabled}">
-                            <controls:StackEditableCard Margin="0,8,0,0" DataContext="{Binding ExtraNetworksStackCardViewModel}" />
+                            <Expander
+                                MinHeight="0"
+                                VerticalAlignment="Center"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Center"
+                                CornerRadius="18"
+                                ExpandDirection="Down"
+                                Header="{x:Static lang:Resources.Label_ExtraNetworks}"
+                                IsExpanded="{Binding ExtraNetworksIsExpanded, Mode=TwoWay}">
+
+                                <controls:StackEditableCard Margin="0,0,8,0" DataContext="{Binding ExtraNetworksStackCardViewModel}" />
+                            </Expander>
+
                         </Panel>
 
                     </sg:SpacedGrid>

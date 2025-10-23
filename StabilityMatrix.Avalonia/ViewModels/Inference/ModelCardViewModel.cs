@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text.Json.Nodes;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Injectio.Attributes;
@@ -98,6 +101,9 @@ public partial class ModelCardViewModel(
     [ObservableProperty]
     private double shift = 3.0d;
 
+    [ObservableProperty]
+    private bool extraNetworksIsExpanded;
+
     public List<string> WeightDTypes { get; set; } = ["default", "fp8_e4m3fn", "fp8_e5m2"];
     public List<string> ClipTypes { get; set; } = ["flux", "sd3", "HiDream"];
 
@@ -125,11 +131,53 @@ public partial class ModelCardViewModel(
     {
         base.OnUnloaded();
         ExtraNetworksStackCardViewModel.CardAdded -= ExtraNetworksStackCardViewModelOnCardAdded;
+
+        // detach property handlers to avoid leaks
+        foreach (var module in ExtraNetworksStackCardViewModel.Cards.OfType<LoraModule>())
+        {
+            if (module.GetCard<ExtraNetworkCardViewModel>() is ExtraNetworkCardViewModel cardVm)
+                cardVm.PropertyChanged -= ExtraNetworkCardOnPropertyChanged;
+        }
     }
 
     private void ExtraNetworksStackCardViewModelOnCardAdded(object? sender, LoadableViewModelBase e)
     {
-        OnSelectedModelChanged(SelectedModel);
+        // find concrete module (LoraModule) that hosts the added card, set title and subscribe
+        foreach (var module in ExtraNetworksStackCardViewModel.Cards)
+        {
+            if (module is not LoraModule loraModule)
+                continue;
+
+            if (
+                loraModule.GetCard<ExtraNetworkCardViewModel>() is ExtraNetworkCardViewModel cardVm
+                && cardVm == e
+            )
+            {
+                loraModule.Title = cardVm.SelectedModel?.ShortDisplayName ?? Resources.Label_ExtraNetworks;
+                cardVm.PropertyChanged -= ExtraNetworkCardOnPropertyChanged;
+                cardVm.PropertyChanged += ExtraNetworkCardOnPropertyChanged;
+                break;
+            }
+        }
+    }
+
+    private void ExtraNetworkCardOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ExtraNetworkCardViewModel.SelectedModel))
+            return;
+
+        if (sender is not ExtraNetworkCardViewModel cardVm)
+            return;
+
+        // locate module that contains this card and update its title
+        foreach (var module in ExtraNetworksStackCardViewModel.Cards)
+        {
+            if (module is LoraModule lora && lora.GetCard<ExtraNetworkCardViewModel>() == cardVm)
+            {
+                lora.Title = cardVm.SelectedModel?.ShortDisplayName ?? Resources.Label_ExtraNetworks;
+                break;
+            }
+        }
     }
 
     [RelayCommand]
@@ -328,6 +376,26 @@ public partial class ModelCardViewModel(
         if (model.ExtraNetworks is not null)
         {
             ExtraNetworksStackCardViewModel.LoadStateFromJsonObject(model.ExtraNetworks);
+
+            // do the title restore/subscriptions after the stack finished restoring to avoid being overwritten
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    foreach (var module in ExtraNetworksStackCardViewModel.Cards.OfType<LoraModule>())
+                    {
+                        if (module.GetCard<ExtraNetworkCardViewModel>() is ExtraNetworkCardViewModel card)
+                        {
+                            module.Title =
+                                card.SelectedModel?.ShortDisplayName ?? Resources.Label_ExtraNetworks;
+
+                            // ensure single subscription
+                            card.PropertyChanged -= ExtraNetworkCardOnPropertyChanged;
+                            card.PropertyChanged += ExtraNetworkCardOnPropertyChanged;
+                        }
+                    }
+                },
+                DispatcherPriority.Background
+            );
         }
     }
 
