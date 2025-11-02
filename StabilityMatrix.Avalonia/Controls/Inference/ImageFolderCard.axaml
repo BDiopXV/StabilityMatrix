@@ -202,6 +202,11 @@
                                                             HotKey="{x:Null}" />
                                                     </ui:MenuFlyoutSubItem>
 
+                                                    <ui:MenuFlyoutItem
+                                                        Command="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).OnSendToCivitai}"
+                                                        CommandParameter="{Binding $self.DataContext}"
+                                                        IconSource="Share"
+                                                        Text="{x:Static lang:Resources.Action_SendToCivitai}" />
 
                                                     <ui:MenuFlyoutSeparator />
 

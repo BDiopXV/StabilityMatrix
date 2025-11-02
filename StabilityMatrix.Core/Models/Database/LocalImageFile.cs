@@ -163,31 +163,37 @@ public record LocalImageFile
 
             var metadata = ImageMetadata.ReadTextChunk(reader, "parameters-json");
 
+            // Parse as mutable JSON
+            var root = JsonNode.Parse(metadata);
+
             var promptJSON = ImageMetadata.ReadTextChunk(reader, "prompt");
 
             var prompt = System.Text.Json.JsonDocument.Parse(promptJSON).RootElement;
 
-            var POS_promptText = prompt
-                .GetProperty("PositiveCLIP_Base")
-                .GetProperty("inputs")
-                .GetProperty("text")
-                .GetString();
+            if (
+                prompt.TryGetProperty("PositiveCLIP_Base", out _) == true
+                || prompt.TryGetProperty("NegativeCLIP_Base", out _) == true
+            )
+            {
+                var POS_promptText = prompt
+                    .GetProperty("PositiveCLIP_Base")
+                    .GetProperty("inputs")
+                    .GetProperty("text")
+                    .GetString();
 
-            var NEG_promptText = prompt
-                .GetProperty("NegativeCLIP_Base")
-                .GetProperty("inputs")
-                .GetProperty("text")
-                .GetString();
+                var NEG_promptText = prompt
+                    .GetProperty("NegativeCLIP_Base")
+                    .GetProperty("inputs")
+                    .GetProperty("text")
+                    .GetString();
 
-            Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
-            Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
+                Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+                Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
 
-            // Parse as mutable JSON
-            var root = JsonNode.Parse(metadata)!;
-
-            // Replace the value
-            root["PositivePrompt"] = POS_promptText;
-            root["NegativePrompt"] = NEG_promptText;
+                // Replace the value
+                root["PositivePrompt"] = POS_promptText;
+                root["NegativePrompt"] = NEG_promptText;
+            }
 
             // Serialize back (pretty-printed)
             string output_metadata = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });

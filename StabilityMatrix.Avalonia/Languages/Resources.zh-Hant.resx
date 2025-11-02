@@ -546,6 +546,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>在資源管理器中打開</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>發佈到 CivitAI</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>在 Finder中打開</value>
   </data>

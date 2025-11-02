@@ -547,6 +547,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>Explorer&apos;da Aç</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>CivitAI'ye gönder</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>Finder&apos;da Aç</value>
   </data>

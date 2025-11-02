@@ -1,14 +1,17 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using AsyncAwaitBestPractices;
 using AsyncImageLoader;
 using Avalonia.Controls.Notifications;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Input;
 using DynamicData;
 using DynamicData.Binding;
@@ -24,6 +27,7 @@ using StabilityMatrix.Avalonia.Models;
 using StabilityMatrix.Avalonia.Services;
 using StabilityMatrix.Avalonia.ViewModels.Base;
 using StabilityMatrix.Avalonia.ViewModels.Dialogs;
+using StabilityMatrix.Avalonia.ViewModels.OutputsPage;
 using StabilityMatrix.Core.Attributes;
 using StabilityMatrix.Core.Models.Database;
 using StabilityMatrix.Core.Models.FileInterfaces;
@@ -434,6 +438,22 @@ public partial class ImageFolderCardViewModel : DisposableViewModelBase
         }
 
         await App.Clipboard.SetTextAsync(item.GenerationParameters.ModelHash);
+    }
+
+    // FIXED: no override, correct signature
+    [RelayCommand]
+    public async Task OnSendToCivitai(LocalImageFile? item)
+    {
+        if (item == null)
+            return;
+
+        // AJOUTER L'UPLOAD VERS ImgBB ICI (base64 image + POST), puis récupérer l'URL de l'image pour Civitai
+        string imageUrl = new Uri(item.AbsolutePath).AbsoluteUri;
+        string civitaiUrl = $"https://civitai.com/intent/post?mediaUrl={imageUrl}";
+
+        System.Diagnostics.Process.Start(
+            new ProcessStartInfo { FileName = civitaiUrl, UseShellExecute = true }
+        );
     }
 
     [RelayCommand]

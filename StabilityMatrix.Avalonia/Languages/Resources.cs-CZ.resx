@@ -231,6 +231,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>Otevřít v Průzkumníkovi</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>Publikovat na CivitAI</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>Otevřít ve Finderu</value>
   </data>

@@ -614,6 +614,15 @@ public sealed class App : Application
             .AddPolicyHandler(retryPolicyLonger);
 
         services
+            .AddRefitClient<IImgBBApi>(defaultRefitSettings)
+            .ConfigureHttpClient(c =>
+            {
+                c.BaseAddress = new Uri("https://api.imgbb.com/1");
+                c.Timeout = TimeSpan.FromHours(1);
+            })
+            .AddPolicyHandler(retryPolicyLonger);
+
+        services
             .AddRefitClient<ILykosModelDiscoveryApi>(defaultRefitSettings)
             .ConfigureHttpClient(c =>
             {

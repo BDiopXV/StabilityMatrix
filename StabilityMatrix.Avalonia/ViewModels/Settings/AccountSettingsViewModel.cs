@@ -58,6 +58,7 @@ public partial class AccountSettingsViewModel : PageViewModelBase
     [NotifyCanExecuteChangedFor(nameof(ConnectLykosCommand))]
     [NotifyCanExecuteChangedFor(nameof(ConnectPatreonCommand))]
     [NotifyCanExecuteChangedFor(nameof(ConnectCivitCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConnectImgBBCommand))]
     [NotifyCanExecuteChangedFor(nameof(ConnectHuggingFaceCommand))]
     private bool isInitialUpdateFinished;
 
@@ -74,6 +75,9 @@ public partial class AccountSettingsViewModel : PageViewModelBase
     [ObservableProperty]
     private CivitAccountStatusUpdateEventArgs civitStatus = CivitAccountStatusUpdateEventArgs.Disconnected;
 
+    [ObservableProperty]
+    private ImgBBAccountStatusUpdateEventArgs imgBBStatus = ImgBBAccountStatusUpdateEventArgs.Disconnected;
+
     // Assume HuggingFaceAccountStatusUpdateEventArgs will be created with at least these properties
     // For now, using a placeholder or assuming a structure like:
     // public record HuggingFaceAccountStatusUpdateEventArgs(bool IsConnected, string? Username);
@@ -86,6 +90,12 @@ public partial class AccountSettingsViewModel : PageViewModelBase
 
     [ObservableProperty]
     private string huggingFaceUsernameWithParentheses = string.Empty;
+
+    [ObservableProperty]
+    private bool isImgBBConnected;
+
+    [ObservableProperty]
+    private string imgBBUsernameWithParentheses = string.Empty;
 
     public string LykosAccountManageUrl =>
         apiOptions.Value.LykosAccountApiBaseUrl.Append("/manage").ToString();
@@ -122,6 +132,15 @@ public partial class AccountSettingsViewModel : PageViewModelBase
             {
                 IsInitialUpdateFinished = true;
                 CivitStatus = args;
+            });
+        };
+
+        accountsService.ImgBBAccountStatusUpdate += (_, args) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                IsInitialUpdateFinished = true;
+                ImgBBStatus = args;
             });
         };
 
@@ -304,12 +323,70 @@ public partial class AccountSettingsViewModel : PageViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(IsInitialUpdateFinished))]
+    private async Task ConnectImgBB()
+    {
+        if (!await BeforeConnectCheck())
+            return;
+
+        var field = new TextBoxField
+        {
+            Label = "ImgBB Token", // Assuming Label is for the prompt
+            IsPassword = true, // Assuming TextBoxField has an IsPassword property
+            Validator = s =>
+            {
+                if (string.IsNullOrWhiteSpace(s))
+                {
+                    throw new ValidationException("Token is required");
+                }
+            },
+        };
+
+        var usrnm = new TextBoxField
+        {
+            Label = "ImgBB Username", // Assuming Label is for the prompt
+            IsPassword = false, // Assuming TextBoxField has an IsPassword property
+            Validator = s =>
+            {
+                if (string.IsNullOrWhiteSpace(s))
+                {
+                    throw new ValidationException("Username is required");
+                }
+            },
+        };
+
+        var dialog = DialogHelper.CreateTextEntryDialog(
+            "Connect ImgBB Account",
+            "Go to [ImgBB settings](https://api.imgbb.com/) to create a new Access Token. Ensure it has read permissions. Paste the token below.",
+            [usrnm, field]
+        );
+
+        var result = await dialog.ShowAsync();
+
+        if (
+            result == ContentDialogResult.Primary
+            && !string.IsNullOrWhiteSpace(field.Text)
+            && !string.IsNullOrWhiteSpace(usrnm.Text)
+        )
+        {
+            await accountsService.ImgBBLoginAsync(field.Text, usrnm.Text);
+            await accountsService.RefreshAsync();
+        }
+    }
+
+    [RelayCommand]
+    private Task DisconnectImgBB()
+    {
+        // Assuming HuggingFaceLogoutAsync will be added to IAccountsService
+        return accountsService.ImgBBLogoutAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsInitialUpdateFinished))]
     private async Task ConnectHuggingFace()
     {
         if (!await BeforeConnectCheck())
             return;
 
-        var field = new TextBoxField 
+        var field = new TextBoxField
         {
             Label = "Hugging Face Token", // Assuming Label is for the prompt
             IsPassword = true, // Assuming TextBoxField has an IsPassword property
@@ -325,14 +402,14 @@ public partial class AccountSettingsViewModel : PageViewModelBase
         var dialog = DialogHelper.CreateTextEntryDialog(
             "Connect Hugging Face Account",
             "Go to [Hugging Face settings](https://huggingface.co/settings/tokens) to create a new Access Token. Ensure it has read permissions. Paste the token below.",
-            [field] 
+            [field]
         );
 
         var result = await dialog.ShowAsync();
 
         if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(field.Text))
         {
-            await accountsService.HuggingFaceLoginAsync(field.Text); 
+            await accountsService.HuggingFaceLoginAsync(field.Text);
             await accountsService.RefreshAsync();
         }
     }
@@ -392,6 +469,41 @@ public partial class AccountSettingsViewModel : PageViewModelBase
                 notificationService.Show(
                     "Hugging Face Connection Error",
                     $"Failed to connect Hugging Face account: {value.ErrorMessage}. Please check your token and try again.",
+                    NotificationType.Error, // Assuming NotificationType.Error exists and is correct
+                    TimeSpan.FromSeconds(10) // Display for 10 seconds, or TimeSpan.Zero for persistent
+                );
+            }
+        }
+    }
+
+    partial void OnImgBBStatusChanged(ImgBBAccountStatusUpdateEventArgs value)
+    {
+        IsImgBBConnected = value.IsConnected;
+
+        if (value.IsConnected)
+        {
+            if (!string.IsNullOrWhiteSpace(value.Username))
+            {
+                ImgBBUsernameWithParentheses = $"({value.Username})";
+            }
+            else
+            {
+                ImgBBUsernameWithParentheses = "(Connected)"; // Fallback if no username
+            }
+        }
+        else
+        {
+            ImgBBUsernameWithParentheses = string.Empty;
+            if (!string.IsNullOrWhiteSpace(value.ErrorMessage))
+            {
+                // Assuming INotificationService.Show takes these parameters and NotificationType.Error is valid.
+                // Dispatcher.UIThread.Post might be needed if Show itself doesn't handle UI thread marshalling,
+                // but usually notification services are designed to be called from any thread.
+                // The event handler for HuggingFaceAccountStatusUpdate already posts to UIThread,
+                // so this method (OnHuggingFaceStatusChanged) is already on the UI thread.
+                notificationService.Show(
+                    "ImgBB Connection Error",
+                    $"Failed to connect ImgBB account: {value.ErrorMessage}. Please check your token and try again.",
                     NotificationType.Error, // Assuming NotificationType.Error exists and is correct
                     TimeSpan.FromSeconds(10) // Display for 10 seconds, or TimeSpan.Zero for persistent
                 );

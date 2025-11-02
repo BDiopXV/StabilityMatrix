@@ -548,6 +548,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>Abrir en el Explorador</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>Publicar en CivitAI</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>Abrir en Finder</value>
   </data>

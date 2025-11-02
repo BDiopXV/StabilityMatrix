@@ -546,6 +546,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>Открыть в проводнике</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>Опубликовать на CivitAI</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>Открыть в файндере</value>
   </data>

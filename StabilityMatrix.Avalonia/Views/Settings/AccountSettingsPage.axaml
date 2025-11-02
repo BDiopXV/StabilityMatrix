@@ -169,7 +169,7 @@
             <sg:SpacedGrid
                 Margin="0,6,0,0"
                 RowDefinitions="Auto,*,*,*"
-                RowSpacing="4">
+                RowSpacing="5">
                 <TextBlock
                     Margin="0,0,0,4"
                     FontWeight="Medium"
@@ -194,9 +194,8 @@
                         </MultiBinding>
                     </controls:SettingsAccountLinkExpander.IsLoading>
                 </controls:SettingsAccountLinkExpander>
-
                 <controls:SettingsAccountLinkExpander
-                    Grid.Row="3"
+                    Grid.Row="4"
                     ConnectCommand="{Binding ConnectHuggingFaceCommand}"
                     DisconnectCommand="{Binding DisconnectHuggingFaceCommand}"
                     Header="Hugging Face"
@@ -217,6 +216,34 @@
 
             </sg:SpacedGrid>
 
+            <sg:SpacedGrid
+                Margin="0,6,0,0"
+                RowDefinitions="Auto,*,*,*"
+                RowSpacing="5">
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontWeight="Medium"
+                    Text="{x:Static lang:Resources.Label_Integrations}" />
+                <controls:SettingsAccountLinkExpander
+                    Grid.Row="3"
+                    ConnectCommand="{Binding ConnectImgBBCommand}"
+                    DisconnectCommand="{Binding DisconnectImgBBCommand}"
+                    Header="ImgBB"
+                    HeaderTargetUri="https://api.imgbb.com"
+                    IsConnected="{Binding ImgBBStatus.IsConnected}"
+                    OffDescription="Connect to temporarily upload images to ImgBB for CivitAI uploads"
+                    OnDescriptionExtra="{Binding ImgBBUsernameWithParentheses}">
+                    <controls:SettingsAccountLinkExpander.IconSource>
+                        <ui:BitmapIconSource UriSource="avares://StabilityMatrix.Avalonia/Assets/imgbb-icon-filled-256.png" />
+                    </controls:SettingsAccountLinkExpander.IconSource>
+                    <controls:SettingsAccountLinkExpander.IsLoading>
+                        <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                            <Binding Path="ConnectImgBBCommand.IsRunning" />
+                            <Binding Path="!IsInitialUpdateFinished" />
+                        </MultiBinding>
+                    </controls:SettingsAccountLinkExpander.IsLoading>
+                </controls:SettingsAccountLinkExpander>
+            </sg:SpacedGrid>
         </StackPanel>
     </ScrollViewer>
 

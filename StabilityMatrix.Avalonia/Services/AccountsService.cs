@@ -16,6 +16,7 @@ using StabilityMatrix.Core.Attributes;
 using StabilityMatrix.Core.Models;
 using StabilityMatrix.Core.Models.Api;
 using StabilityMatrix.Core.Models.Api.CivitTRPC;
+using StabilityMatrix.Core.Models.Api.ImgBB;
 using StabilityMatrix.Core.Models.Api.Lykos;
 using StabilityMatrix.Core.Services;
 using static OpenIddict.Client.OpenIddictClientModels;
@@ -31,6 +32,7 @@ public class AccountsService : IAccountsService
     private readonly ILykosAuthApiV1 lykosAuthApi;
     private readonly ILykosAuthApiV2 lykosAuthApiV2;
     private readonly ICivitTRPCApi civitTRPCApi;
+    private readonly IImgBBApi imgbbApi;
     private readonly IHuggingFaceApi huggingFaceApi; // Added
     private readonly OpenIddictClientService openIdClient;
 
@@ -41,11 +43,14 @@ public class AccountsService : IAccountsService
     public event EventHandler<CivitAccountStatusUpdateEventArgs>? CivitAccountStatusUpdate;
 
     /// <inheritdoc />
+    public event EventHandler<ImgBBAccountStatusUpdateEventArgs>? ImgBBAccountStatusUpdate;
     public event EventHandler<HuggingFaceAccountStatusUpdateEventArgs>? HuggingFaceAccountStatusUpdate;
 
     public LykosAccountStatusUpdateEventArgs? LykosStatus { get; private set; }
 
     public CivitAccountStatusUpdateEventArgs? CivitStatus { get; private set; }
+
+    public ImgBBAccountStatusUpdateEventArgs? ImgBBStatus { get; private set; }
 
     public HuggingFaceAccountStatusUpdateEventArgs? HuggingFaceStatus { get; private set; }
 
@@ -55,6 +60,7 @@ public class AccountsService : IAccountsService
         ILykosAuthApiV1 lykosAuthApi,
         ILykosAuthApiV2 lykosAuthApiV2,
         ICivitTRPCApi civitTRPCApi,
+        IImgBBApi imgbbApi,
         IHuggingFaceApi huggingFaceApi, // Added
         OpenIddictClientService openIdClient
     )
@@ -64,6 +70,7 @@ public class AccountsService : IAccountsService
         this.lykosAuthApi = lykosAuthApi;
         this.lykosAuthApiV2 = lykosAuthApiV2;
         this.civitTRPCApi = civitTRPCApi;
+        this.imgbbApi = imgbbApi;
         this.huggingFaceApi = huggingFaceApi; // Added
         this.openIdClient = openIdClient;
 
@@ -197,6 +204,26 @@ public class AccountsService : IAccountsService
         OnCivitAccountStatusUpdate(CivitAccountStatusUpdateEventArgs.Disconnected);
     }
 
+    public async Task ImgBBLoginAsync(string apiToken, string username)
+    {
+        var secrets = await secretsManager.SafeLoadAsync();
+
+        secrets = secrets with { ImgBBApi = new ImgBBApiTokens(apiToken, username) };
+
+        await secretsManager.SaveAsync(secrets);
+
+        await RefreshImgBBAsync(secrets);
+    }
+
+    /// <inheritdoc />
+    public async Task ImgBBLogoutAsync()
+    {
+        var secrets = await secretsManager.SafeLoadAsync();
+        await secretsManager.SaveAsync(secrets with { ImgBBApi = null });
+
+        OnImgBBAccountStatusUpdate(ImgBBAccountStatusUpdateEventArgs.Disconnected);
+    }
+
     public async Task RefreshAsync()
     {
         var secrets = await secretsManager.SafeLoadAsync();
@@ -204,6 +231,7 @@ public class AccountsService : IAccountsService
         await RefreshLykosAsync(secrets);
         await RefreshCivitAsync(secrets);
         await RefreshHuggingFaceAsync(secrets);
+        await RefreshImgBBAsync(secrets);
     }
 
     public async Task RefreshLykosAsync()
@@ -341,6 +369,49 @@ public class AccountsService : IAccountsService
         }
     }
 
+    private async Task RefreshImgBBAsync(Secrets secrets)
+    {
+        if (!string.IsNullOrWhiteSpace(secrets.ImgBBApi?.ApiToken))
+        {
+            try
+            {
+                // Token is valid, user info fetched
+                logger.LogInformation("ImgBB token is valid. User: {Username}", secrets.ImgBBApi.Username);
+                OnImgBBAccountStatusUpdate(
+                    new ImgBBAccountStatusUpdateEventArgs(true, secrets.ImgBBApi.Username)
+                );
+            }
+            catch (ApiException apiEx)
+            {
+                // Handle Refit's ApiException (network issues, non-success status codes not caught by IsSuccessStatusCode if IApiResponse isn't used directly)
+                logger.LogError(
+                    apiEx,
+                    "ImgBB API request failed during token validation. Content: {Content}",
+                    await apiEx.GetContentAsAsync<string>() ?? "N/A"
+                );
+                OnImgBBAccountStatusUpdate(
+                    new ImgBBAccountStatusUpdateEventArgs(
+                        false,
+                        null,
+                        "API request failed during token validation."
+                    )
+                );
+            }
+            catch (Exception ex)
+            {
+                // Handle other unexpected errors
+                logger.LogError(ex, "An unexpected error occurred during Hugging Face token validation.");
+                OnImgBBAccountStatusUpdate(
+                    new ImgBBAccountStatusUpdateEventArgs(false, null, "An unexpected error occurred.")
+                );
+            }
+        }
+        else
+        {
+            OnImgBBAccountStatusUpdate(ImgBBAccountStatusUpdateEventArgs.Disconnected);
+        }
+    }
+
     private async Task RefreshCivitAsync(Secrets secrets)
     {
         if (secrets.CivitApi is not null)
@@ -409,6 +480,27 @@ public class AccountsService : IAccountsService
         }
 
         CivitAccountStatusUpdate?.Invoke(this, e);
+    }
+
+    private void OnImgBBAccountStatusUpdate(ImgBBAccountStatusUpdateEventArgs e)
+    {
+        if (!e.IsConnected && ImgBBStatus?.IsConnected == true)
+        {
+            logger.LogInformation("ImgBB account disconnected");
+        }
+        else if (e.IsConnected && ImgBBStatus?.IsConnected == false)
+        {
+            // Assuming Username might be null for now as we are not fetching it.
+            logger.LogInformation(
+                "ImgBB account connected"
+                    + (string.IsNullOrWhiteSpace(e.Username) ? "" : $" (User: {e.Username})")
+            );
+        }
+        else if (!e.IsConnected && !string.IsNullOrWhiteSpace(e.ErrorMessage))
+        {
+            logger.LogWarning("ImgBB connection/validation failed: {ErrorMessage}", e.ErrorMessage);
+        }
+        ImgBBAccountStatusUpdate?.Invoke(this, e);
     }
 
     private void OnHuggingFaceAccountStatusUpdate(HuggingFaceAccountStatusUpdateEventArgs e)

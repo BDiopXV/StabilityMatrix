@@ -661,12 +661,24 @@ namespace StabilityMatrix.Avalonia.Languages {
                 return ResourceManager.GetString("Action_SendToInference", resourceCulture);
             }
         }
-        
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Send to Inference.
+        /// </summary>
+        public static string Action_SendToCivitai {
+            get {
+                return ResourceManager.GetString("Action_SendToCivitai", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Show in Explorer.
         /// </summary>
-        public static string Action_ShowInExplorer {
-            get {
+        public static string Action_ShowInExplorer
+        {
+            get
+            {
                 return ResourceManager.GetString("Action_ShowInExplorer", resourceCulture);
             }
         }

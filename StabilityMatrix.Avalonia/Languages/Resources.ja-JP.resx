@@ -548,6 +548,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>エクスプローラで開く</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>CivitAI に投稿</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>ファインダーで開く</value>
   </data>

@@ -546,6 +546,9 @@
   <data name="Action_OpenInExplorer" xml:space="preserve">
     <value>탐색기에서 열기</value>
   </data>
+  <data name="Action_SendToCivitai" xml:space="preserve">
+    <value>CivitAI 에 게시</value>
+  </data>
   <data name="Action_OpenInFinder" xml:space="preserve">
     <value>Finder에서 열기</value>
   </data>
