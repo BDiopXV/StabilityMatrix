@@ -48,13 +48,9 @@ public interface IAccountsService
     Task CivitLogoutAsync();
 
     Task ImgBBLoginAsync(string apiToken, string username);
-
     Task ImgBBLogoutAsync();
-
     Task RefreshAsync();
-
     Task RefreshLykosAsync();
-
     Task HuggingFaceLoginAsync(string token);
     Task HuggingFaceLogoutAsync();
     Task RefreshHuggingFaceAsync();

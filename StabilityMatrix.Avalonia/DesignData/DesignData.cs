@@ -153,6 +153,7 @@ public static class DesignData
             .AddSingleton<IPyRunner>(_ => null!)
             .AddSingleton<ILiteDbContext>(_ => null!)
             .AddSingleton<ICivitApi>(_ => null!)
+            .AddSingleton<ICivitIntentApi>(_ => null!)
             .AddSingleton<IGithubApiCache>(_ => null!)
             .AddSingleton<ITokenizerProvider>(_ => null!)
             .AddSingleton<IPrerequisiteHelper>(_ => null!)

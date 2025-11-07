@@ -32,6 +32,7 @@ using StabilityMatrix.Core.Attributes;
 using StabilityMatrix.Core.Models.Database;
 using StabilityMatrix.Core.Models.FileInterfaces;
 using StabilityMatrix.Core.Models.Settings;
+using StabilityMatrix.Core.Models.Settings;
 using StabilityMatrix.Core.Processes;
 using StabilityMatrix.Core.Services;
 using StabilityMatrix.Native;
@@ -50,6 +51,9 @@ public partial class ImageFolderCardViewModel : DisposableViewModelBase
     private readonly INotificationService notificationService;
     private readonly IServiceManager<ViewModelBase> vmFactory;
 
+    private readonly ICivitAIUploadService civitAIUploader;
+    private readonly ISecretsManager secretsManager;
+
     [ObservableProperty]
     private string? searchQuery;
 
@@ -67,7 +71,8 @@ public partial class ImageFolderCardViewModel : DisposableViewModelBase
         IImageIndexService imageIndexService,
         ISettingsManager settingsManager,
         INotificationService notificationService,
-        IServiceManager<ViewModelBase> vmFactory
+        IServiceManager<ViewModelBase> vmFactory,
+        ICivitAIUploadService civitAIUploader
     )
     {
         this.logger = logger;
@@ -75,7 +80,7 @@ public partial class ImageFolderCardViewModel : DisposableViewModelBase
         this.settingsManager = settingsManager;
         this.notificationService = notificationService;
         this.vmFactory = vmFactory;
-
+        this.civitAIUploader = civitAIUploader;
         var searcher = new ImageSearcher();
 
         // Observable predicate from SearchQuery changes
@@ -444,16 +449,7 @@ public partial class ImageFolderCardViewModel : DisposableViewModelBase
     [RelayCommand]
     public async Task OnSendToCivitai(LocalImageFile? item)
     {
-        if (item == null)
-            return;
-
-        // AJOUTER L'UPLOAD VERS ImgBB ICI (base64 image + POST), puis récupérer l'URL de l'image pour Civitai
-        string imageUrl = new Uri(item.AbsolutePath).AbsoluteUri;
-        string civitaiUrl = $"https://civitai.com/intent/post?mediaUrl={imageUrl}";
-
-        System.Diagnostics.Process.Start(
-            new ProcessStartInfo { FileName = civitaiUrl, UseShellExecute = true }
-        );
+        await civitAIUploader.UploadToCivitAIAsync(item.AbsolutePath, item.FileNameWithoutExtension);
     }
 
     [RelayCommand]

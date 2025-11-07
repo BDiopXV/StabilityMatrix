@@ -1,22 +1,24 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace StabilityMatrix.Core.Models.Api.ImgBB;
 
-public record ImgBBImageUploadResponse : IFormattable
+public class ImgBBImageUploadResponse
 {
-    [JsonPropertyName("result")]
-    public required JsonObject Result { get; init; }
+    [JsonPropertyName("data")]
+    public ImgBBUploadData Data { get; set; } = new();
 
-    public string? ApiKey => Result["data"]?["url"]?.GetValue<string>();
-    public string? Id => Result["data"]?["id"]?.GetValue<string>();
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
 
-    public string? delete_url => Result["data"]?["delete_url"]?.GetValue<string>();
+    [JsonPropertyName("status")]
+    public int Status { get; set; }
+}
 
-    /// <inheritdoc />
-    public string ToString(string? format, IFormatProvider? formatProvider)
-    {
-        return JsonSerializer.Serialize(new { json = this });
-    }
+public class ImgBBUploadData
+{
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("display_url")]
+    public string? DisplayUrl { get; set; }
 }

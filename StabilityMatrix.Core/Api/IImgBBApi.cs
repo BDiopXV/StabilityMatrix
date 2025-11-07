@@ -8,7 +8,10 @@ namespace StabilityMatrix.Core.Api;
 public interface IImgBBApi
 {
     [Post("/upload")]
-    Task<HttpResponseMessage> UploadImage([Body] ImgBBUploadImageRequest request);
+    [Headers("Content-Type: application/x-www-form-urlencoded")]
+    Task<ImgBBImageUploadResponse> UploadImage(
+        [Body(BodySerializationMethod.UrlEncoded)] ImgBBUploadImageRequest request
+    );
 
     [Get("/{id}/{delete_token}")]
     Task<HttpResponseMessage> DeleteImagebyId(int id, [Query] string delete_token);

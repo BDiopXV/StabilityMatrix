@@ -614,13 +614,25 @@ public sealed class App : Application
             .AddPolicyHandler(retryPolicyLonger);
 
         services
+            .AddRefitClient<ICivitIntentApi>(defaultRefitSettings)
+            .ConfigureHttpClient(c =>
+            {
+                c.BaseAddress = new Uri("https://civitai.com");
+                c.Timeout = TimeSpan.FromHours(1);
+            })
+            .AddPolicyHandler(retryPolicyLonger);
+
+        services
             .AddRefitClient<IImgBBApi>(defaultRefitSettings)
             .ConfigureHttpClient(c =>
             {
                 c.BaseAddress = new Uri("https://api.imgbb.com/1");
                 c.Timeout = TimeSpan.FromHours(1);
             })
-            .AddPolicyHandler(retryPolicyLonger);
+            .AddPolicyHandler(retryPolicyLonger)
+            .AddHttpMessageHandler(serviceProvider => new TokenAuthBodyHandler(
+                serviceProvider.GetRequiredService<ImgBBAuthTokenProvider>()
+            ));
 
         services
             .AddRefitClient<ILykosModelDiscoveryApi>(defaultRefitSettings)
