@@ -164,7 +164,7 @@ public record LocalImageFile
             var metadata = ImageMetadata.ReadTextChunk(reader, "parameters-json");
 
             // Parse as mutable JSON
-            var root = JsonNode.Parse(metadata);
+            var root = JsonNode.Parse(metadata)!;
 
             var promptJSON = ImageMetadata.ReadTextChunk(reader, "prompt");
 
