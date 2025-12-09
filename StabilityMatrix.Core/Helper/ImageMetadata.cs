@@ -127,8 +127,8 @@ public class ImageMetadata
             .GetProperty("text")
             .GetString();
 
-        Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
-        Logger.Info("Loaded Image metadata Positive'{Meta}'", NEG_promptText);
+        // Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+        // Logger.Info("Loaded Image metadata Positive'{Meta}'", NEG_promptText);
 
         var parameters = ReadTextChunk(reader, "parameters");
         var parametersJson = ReadTextChunk(reader, "parameters-json");

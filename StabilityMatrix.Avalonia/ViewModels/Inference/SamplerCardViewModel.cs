@@ -82,6 +82,8 @@ public partial class SamplerCardViewModel : LoadableViewModelBase, IParametersLo
     [Required]
     private ComfySampler? selectedSampler = ComfySampler.EulerAncestral;
 
+    public KJComfySampler selectedKJSampler { get; set; } = KJComfySampler.Euler;
+
     [ObservableProperty]
     [property: Category("Settings")]
     [property: DisplayName("Scheduler Selection")]

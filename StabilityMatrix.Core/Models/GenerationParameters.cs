@@ -19,6 +19,27 @@ public record GenerationParameters
     public int Width { get; set; }
     public string? ModelHash { get; set; }
     public string? ModelName { get; set; }
+
+    // 🔹 NEW fields for WAN 2.2 dual models
+    public string? ModelNameHigh { get; init; }
+    public string? ModelHashHigh { get; init; }
+    public string? ModelNameLow { get; init; }
+    public string? ModelHashLow { get; init; }
+
+    public IList<int>? ExtraNetworkModelVersionIdsHigh { get; init; }
+    public IList<int>? ExtraNetworkModelVersionIdsLow { get; init; }
+
+    // 🔹 NEW fields for LoRA lists
+    public List<string>? LorasHigh { get; set; }
+    public List<string>? LorasLow { get; set; }
+
+    // 🔹 NEW field for WAN 2.2 VAE
+    public string? VaeName { get; set; }
+
+    // 🔹 If you want to persist CLIP models too
+    public string? ClipName { get; set; }
+    public string? ClipVisionName { get; set; }
+
     public int FrameCount { get; set; }
     public int MotionBucketId { get; set; }
     public int VideoQuality { get; set; }

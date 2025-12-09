@@ -79,16 +79,31 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            using var stream = new MemoryStream(imageBytes);
+            try
+            {
+                if (imageBytes == null || imageBytes.Length == 0)
+                {
+                    Logger.Warn("SetPreviewImage: imageBytes is null or empty");
+                    return;
+                }
 
-            var bitmap = new Bitmap(stream);
+                using var stream = new MemoryStream(imageBytes);
+                stream.Seek(0, SeekOrigin.Begin); // Ensure stream is at the beginning
 
-            var currentImage = PreviewImage;
+                var bitmap = new Bitmap(stream);
 
-            PreviewImage = bitmap;
-            IsPreviewOverlayEnabled = true;
+                var currentImage = PreviewImage;
 
-            // currentImage?.Dispose();
+                PreviewImage = bitmap;
+                IsPreviewOverlayEnabled = true;
+
+                // Dispose old bitmap if it exists
+                currentImage?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to set preview image");
+            }
         });
     }
 
@@ -159,7 +174,7 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
         var viewerVm = vmFactory.Get<ImageViewerViewModel>();
         viewerVm.ImageSource = new ImageSource((Bitmap)image);
 
-        var dialog = new BetterContentDialog { Content = new ImageViewerDialog { DataContext = viewerVm, } };
+        var dialog = new BetterContentDialog { Content = new ImageViewerDialog { DataContext = viewerVm } };
 
         await dialog.ShowAsync();
     }

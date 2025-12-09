@@ -35,6 +35,7 @@ namespace StabilityMatrix.Avalonia.ViewModels.Base;
 [JsonDerivedType(typeof(SaveImageModule))]
 [JsonDerivedType(typeof(PromptExpansionModule))]
 [JsonDerivedType(typeof(LoraModule))]
+[JsonDerivedType(typeof(Wan22LoraModule))]
 [JsonDerivedType(typeof(LayerDiffuseModule))]
 [JsonDerivedType(typeof(FaceDetailerModule))]
 [JsonDerivedType(typeof(FluxGuidanceModule))]

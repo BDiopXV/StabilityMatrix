@@ -96,8 +96,8 @@ public record LocalImageFile
             .GetProperty("text")
             .GetString();
 
-        Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
-        Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
+        // Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+        // Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
 
         var parameters = ImageMetadata.ReadTextChunk(reader, "parameters");
         var parametersJson = ImageMetadata.ReadTextChunk(reader, "parameters-json");
@@ -187,8 +187,8 @@ public record LocalImageFile
                     .GetProperty("text")
                     .GetString();
 
-                Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
-                Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
+                // Logger.Info("Loaded Image metadata Positive'{Meta}'", POS_promptText);
+                // Logger.Info("Loaded Image metadata Negative'{Meta}'", NEG_promptText);
 
                 // Replace the value
                 root["PositivePrompt"] = POS_promptText;

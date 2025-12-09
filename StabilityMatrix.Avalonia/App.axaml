@@ -72,6 +72,7 @@
         <StyleInclude Source="Controls/StarsRating.axaml" />
         <StyleInclude Source="Controls/VideoGenerationSettingsCard.axaml" />
         <StyleInclude Source="Controls/VideoOutputSettingsCard.axaml" />
+        <StyleInclude Source="Controls/VideoWan22OutputSettingsCard.axaml" />
         <StyleInclude Source="Controls/TreeFileExplorer.axaml" />
         <StyleInclude Source="Controls/GitVersionSelector.axaml" />
         <StyleInclude Source="Controls/Inference/StackCard.axaml" />
@@ -81,6 +82,7 @@
         <StyleInclude Source="Controls/Inference/SamplerCard.axaml" />
         <StyleInclude Source="Controls/Inference/ImageGalleryCard.axaml" />
         <StyleInclude Source="Controls/Inference/PromptCard.axaml" />
+        <StyleInclude Source="Controls/Inference/PromptWan22Card.axaml" />
         <StyleInclude Source="Controls/Inference/UpscalerCard.axaml" />
         <StyleInclude Source="Controls/Inference/ModelCard.axaml" />
         <StyleInclude Source="Controls/Inference/FaceDetailerCard.axaml" />
@@ -98,6 +100,7 @@
         <StyleInclude Source="Controls/Painting/PaintCanvas.axaml" />
         <StyleInclude Source="Controls/MarkdownViewer.axaml" />
         <StyleInclude Source="Controls/Inference/WanModelCard.axaml" />
+        <StyleInclude Source="Controls/Inference/Wan22ModelCard.axaml" />
         <StyleInclude Source="Controls/Inference/PlasmaNoiseCard.axaml" />
         <StyleInclude Source="Controls/Inference/NrsCard.axaml" />
         <StyleInclude Source="Controls/Inference/CfzCudnnToggleCard.axaml" />

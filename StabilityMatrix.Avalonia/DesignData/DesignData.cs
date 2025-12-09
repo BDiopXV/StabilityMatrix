@@ -983,6 +983,9 @@ The gallery images are often inpainted, but you will get something very similar 
     public static InferenceWanImageToVideoViewModel InferenceWanImageToVideoViewModel =>
         DialogFactory.Get<InferenceWanImageToVideoViewModel>();
 
+    public static InferenceWan22ImageToVideoViewModel InferenceWan22ImageToVideoViewModel =>
+        DialogFactory.Get<InferenceWan22ImageToVideoViewModel>();
+
     public static PackageImportViewModel PackageImportViewModel =>
         DialogFactory.Get<PackageImportViewModel>();
 
@@ -1002,6 +1005,8 @@ The gallery images are often inpainted, but you will get something very similar 
     public static SeedCardViewModel SeedCardViewModel => new();
     public static SvdImgToVidConditioningViewModel SvdImgToVidConditioningViewModel => new();
     public static VideoOutputSettingsCardViewModel VideoOutputSettingsCardViewModel => new();
+
+    public static VideoWan22OutputSettingsCardViewModel VideoWan22OutputSettingsCardViewModel => new();
 
     public static SamplerCardViewModel SamplerCardViewModel =>
         DialogFactory.Get<SamplerCardViewModel>(vm =>
@@ -1032,6 +1037,8 @@ The gallery images are often inpainted, but you will get something very similar 
 
     public static ModelCardViewModel ModelCardViewModel => DialogFactory.Get<ModelCardViewModel>();
     public static WanModelCardViewModel WanModelCardViewModel => DialogFactory.Get<WanModelCardViewModel>();
+    public static Wan22ModelCardViewModel Wan22ModelCardViewModel =>
+        DialogFactory.Get<Wan22ModelCardViewModel>();
 
     public static ImgToVidModelCardViewModel ImgToVidModelCardViewModel =>
         DialogFactory.Get<ImgToVidModelCardViewModel>();
@@ -1073,6 +1080,24 @@ The gallery images are often inpainted, but you will get something very similar 
 
     public static PromptCardViewModel PromptCardViewModel =>
         DialogFactory.Get<PromptCardViewModel>(vm =>
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("house, (high quality), [example], BREAK");
+            builder.AppendLine("# this is a comment");
+            builder.AppendLine(
+                "(detailed), [purple and orange lighting], looking pleased, (cinematic, god rays:0.8), "
+                    + "(8k, 4k, high res:1), (intricate), (unreal engine:1.2), (shaded:1.1), "
+                    + "(soft focus, detailed background), (horizontal lens flare), "
+                    + "(clear eyes)"
+            );
+            builder.AppendLine("<lora:details:0.8>, <lyco:some_model>");
+
+            vm.PromptDocument.Text = builder.ToString();
+            vm.NegativePromptDocument.Text = "embedding:EasyNegative, blurry, jpeg artifacts";
+        });
+
+    public static PromptWan22CardViewModel PromptWan22CardViewModel =>
+        DialogFactory.Get<PromptWan22CardViewModel>(vm =>
         {
             var builder = new StringBuilder();
             builder.AppendLine("house, (high quality), [example], BREAK");

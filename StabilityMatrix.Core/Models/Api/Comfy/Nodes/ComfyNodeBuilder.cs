@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Text.Json.Serialization;
 using OneOf;
 using StabilityMatrix.Core.Attributes;
 using StabilityMatrix.Core.Extensions;
@@ -191,6 +192,215 @@ public class ComfyNodeBuilder
         public double Ratio { get; init; } = 1;
     }
 
+    public record WanVideoModelLoader : ComfyTypedNodeBase<ModelNodeConnection>
+    {
+        public required string Model { get; init; }
+        public CompileArgsNodeConnection? CompileArgs { get; init; }
+        public BlockSwapNodeConnection? BlockSwapArgs { get; init; }
+        public ModelNodeConnection Lora { get; init; }
+        public required string BasePrecision { get; init; }
+        public required string Quantization { get; init; }
+        public required string LoadDevice { get; init; }
+        public required string AttentionMode { get; init; }
+        public required string RmsNormFunction { get; init; }
+    }
+
+    public record WanVideoVAELoader : ComfyTypedNodeBase<VAENodeConnection>
+    {
+        public CompileArgsNodeConnection? CompileArgs { get; init; }
+
+        public required string ModelName { get; init; }
+        public required string Precision { get; init; }
+    }
+
+    public record WanVideoSampler : ComfyTypedNodeBase<LatentNodeConnection, LatentNodeConnection>
+    {
+        public required ModelNodeConnection Model { get; init; }
+        public required ImageEmbedsNodeConnection ImageEmbeds { get; init; }
+        public required TextEmbedsNodeConnection TextEmbeds { get; init; }
+        public LatentNodeConnection? Samples { get; init; } // optional chained latent
+        public LatentNodeConnection? DenoisedSamples { get; init; } // optional chained latent
+        public FetaArgsNodeConnection? FetaArgs { get; init; } // optional enhancement args
+        public int Steps { get; init; }
+        public double Cfg { get; init; }
+        public double Shift { get; init; } // ADD THIS
+        public int StartStep { get; init; }
+        public int EndStep { get; init; }
+        public ulong Seed { get; init; }
+        public string Scheduler { get; init; } = "euler";
+        public int RiflexFreqIndex { get; init; } // ADD THIS
+        public bool ForceOffload { get; init; } = true;
+    }
+
+    public record WanVideoSetLoRAs : ComfyTypedNodeBase<ModelNodeConnection>
+    {
+        public required ModelNodeConnection Model { get; init; }
+        public required IEnumerable<string> LoraNames { get; init; }
+    }
+
+    [TypedNodeOptions(Name = "ImageResize+")]
+    public record ImageResizePlus
+        : ComfyTypedNodeBase<ImageNodeConnection, ImageWidthNodeConnection, ImageHeightNodeConnection>
+    {
+        public required ImageNodeConnection Image { get; init; }
+        public required int Width { get; init; }
+        public required int Height { get; init; }
+        public string Interpolation { get; init; } = "lanczos";
+        public string Method { get; init; } = "keep proportion";
+        public string Condition { get; init; } = "always";
+        public int MultipleOf { get; init; } = 32;
+    }
+
+    public record WanVideoBlockSwap : ComfyTypedNodeBase<BlockSwapNodeConnection>
+    {
+        public CompileArgsNodeConnection? CompileArgs { get; init; }
+        public int BlocksToSwap { get; init; } = 40;
+
+        [JsonPropertyName("offload_img_emb")]
+        public bool OffloadImageEmb { get; init; } = false;
+
+        [JsonPropertyName("offload_txt_emb")]
+        public bool OffloadTextEmb { get; init; } = false;
+
+        public bool UseNonBlocking { get; init; } = true;
+        public int VaceBlocksToSwap { get; init; } = 0;
+        public int PrefetchBlocks { get; init; } = 0;
+        public bool BlockSwapDebug { get; init; } = false;
+    }
+
+    public record WanVideoTorchCompileSettings : ComfyTypedNodeBase<CompileArgsNodeConnection>
+    {
+        public required string Backend { get; init; }
+
+        [JsonPropertyName("fullgraph")]
+        public required bool FullGraph { get; init; }
+
+        public required string Mode { get; init; }
+        public required bool Dynamic { get; init; }
+
+        [JsonPropertyName("dynamo_cache_size_limit")]
+        public required int CacheSizeLimit { get; init; }
+
+        public required bool CompileTransformerBlocksOnly { get; init; }
+        public required int RecompileLimit { get; init; }
+    }
+
+    public record WanVideoSetBlockSwap : ComfyTypedNodeBase<ModelNodeConnection>
+    {
+        public required ModelNodeConnection Model { get; init; }
+        public required BlockSwapNodeConnection BlockSwapArgs { get; init; }
+    }
+
+    public record WanVideoLoraSelectMulti : ComfyTypedNodeBase<LoraNodeConnection>
+    {
+        [JsonPropertyName("prev_lora")]
+        public LoraNodeConnection? PrevLora { get; init; }
+
+        [JsonPropertyName("lora_name")]
+        public IEnumerable<string>? LoraNames { get; init; }
+
+        [JsonPropertyName("strength")]
+        public IEnumerable<double>? Strengths { get; init; }
+
+        public bool LowMemLoad { get; init; } = false;
+        public bool MergeLoras { get; init; } = false;
+    }
+
+    public record WanVideoImageToVideoEncode : ComfyTypedNodeBase<ImageEmbedsNodeConnection>
+    {
+        public required VAENodeConnection Vae { get; init; }
+        public required ImageNodeConnection StartImage { get; init; }
+        public int Width { get; init; }
+        public int Height { get; init; }
+        public int NumFrames { get; init; }
+        public double NoiseAugStrength { get; init; } = 0.03;
+        public double StartLatentStrength { get; init; } = 1.0;
+        public double EndLatentStrength { get; init; } = 1.0;
+        public bool ForceOffload { get; init; } = true;
+        public bool FunOrFl2vModel { get; init; } = false;
+        public bool TiledVae { get; init; } = false;
+    }
+
+    public record WanVideoTextEncode : ComfyTypedNodeBase<TextEmbedsNodeConnection>
+    {
+        public required T5NodeConnection T5 { get; init; }
+
+        [JsonPropertyName("positive_prompt")]
+        public required OneOf<string, StringNodeConnection> PositivePrompt { get; init; }
+
+        [JsonPropertyName("negative_prompt")]
+        public required OneOf<string, StringNodeConnection> NegativePrompt { get; init; }
+
+        public bool ForceOffload { get; init; } = true;
+        public bool UseDiskCache { get; init; } = true;
+        public string Device { get; init; } = "gpu";
+    }
+
+    public record WanVideoDecode : ComfyTypedNodeBase<ImageNodeConnection>
+    {
+        public required VAENodeConnection Vae { get; init; }
+        public required LatentNodeConnection Samples { get; init; }
+        public bool EnableVaeTiling { get; init; } = false;
+        public int TileX { get; init; } = 512;
+        public int TileY { get; init; } = 512;
+        public int TileStrideX { get; init; } = 256;
+        public int TileStrideY { get; init; } = 256;
+        public string Normalization { get; init; } = "default";
+    }
+
+    public record LoadWanVideoT5TextEncoder : ComfyTypedNodeBase<T5NodeConnection>
+    {
+        public required string ModelName { get; init; }
+        public string Precision { get; init; } = "fp16";
+        public string LoadDevice { get; init; } = "gpu";
+        public string Quantization { get; init; } = "disabled";
+    }
+
+    public record ImageResizeKJv2 : ComfyTypedNodeBase<ImageNodeConnection>
+    {
+        public required ImageNodeConnection Image { get; init; }
+        public int Width { get; init; }
+        public int Height { get; init; }
+        public string UpscaleMethod { get; init; } = "nearest-exact";
+        public string KeepProportion { get; init; } = "resize";
+        public string PadColor { get; init; } = "0,0,0";
+        public string CropPosition { get; init; } = "center";
+        public int DivisibleBy { get; init; } = 16;
+        public string Device { get; init; } = "cpu";
+    }
+
+    [TypedNodeOptions(Name = "RIFE VFI")]
+    public record RIFEVFI : ComfyTypedNodeBase<ImageNodeConnection>
+    {
+        public required ImageNodeConnection Frames { get; init; }
+        public string CkptName { get; init; } = "rife49.pth";
+        public int ClearCacheAfterNFrames { get; init; } = 16;
+        public int Multiplier { get; init; } = 4;
+        public bool FastMode { get; init; } = false;
+        public bool Ensemble { get; init; } = true;
+        public int ScaleFactor { get; init; } = 1;
+    }
+
+    public record VHS_VideoCombine : ComfyTypedNodeBase
+    {
+        public required ImageNodeConnection Images { get; init; }
+        public double FrameRate { get; init; } = 60;
+        public int LoopCount { get; init; } = 0;
+        public string FilenamePrefix { get; init; } = "wan2/output";
+        public string Format { get; init; } = "video/h264-mp4";
+        public string PixFmt { get; init; } = "yuv420p";
+        public int Crf { get; init; } = 19;
+        public bool SaveMetadata { get; init; } = true;
+        public bool TrimToAudio { get; init; } = false;
+        public bool Pingpong { get; init; } = false;
+        public bool SaveOutput { get; init; } = true;
+    }
+
+    public record EasyCleanGpuUsed : ComfyTypedNodeBase<GenericNodeConnection>
+    {
+        public required GenericNodeConnection Anything { get; init; }
+    }
+
     public static NamedComfyNode<ImageNodeConnection> ImageUpscaleWithModel(
         string name,
         UpscaleModelNodeConnection upscaleModel,
@@ -264,6 +474,29 @@ public class ComfyNodeBuilder
                 ["lora_name"] = loraName,
                 ["strength_model"] = strengthModel,
                 ["strength_clip"] = strengthClip,
+            },
+        };
+    }
+
+    public static NamedComfyNode<ModelNodeConnection, ClipNodeConnection> WanVideoLoraSelect(
+        string name,
+        ModelNodeConnection? PrevLora,
+        string LoraName,
+        double Strength,
+        bool LowMemLoad,
+        bool MergeLoras
+    )
+    {
+        return new NamedComfyNode<ModelNodeConnection, ClipNodeConnection>(name)
+        {
+            ClassType = "WanVideoLoraSelect",
+            Inputs = new Dictionary<string, object?>
+            {
+                ["prev_lora"] = PrevLora,
+                ["lora"] = LoraName,
+                ["strength"] = Strength,
+                ["low_mem_load"] = LowMemLoad,
+                ["merge_loras"] = MergeLoras,
             },
         };
     }
@@ -1540,7 +1773,9 @@ public class ComfyNodeBuilder
         public double? PrimaryCfg { get; set; }
         public string? PrimaryModelType { get; set; }
 
-        public OneOf<string, StringNodeConnection> PositivePrompt { get; set; }
+        public double? PrimaryShift { get; set; }
+
+        public OneOf<string, StringNodeConnection> PositivePrompt { get; set; } = "";
         public OneOf<string, StringNodeConnection> NegativePrompt { get; set; }
 
         public ClipNodeConnection? BaseClip { get; set; }
@@ -1595,6 +1830,8 @@ public class ComfyNodeBuilder
         public NoiseNodeConnection PrimaryNoise { get; set; }
         public SigmasNodeConnection PrimarySigmas { get; set; }
         public SamplerNodeConnection PrimarySamplerNode { get; set; }
+
+        public ImageNodeConnection? RifeVideoOutput { get; set; }
 
         public List<NamedComfyNode> OutputNodes { get; } = new();
 

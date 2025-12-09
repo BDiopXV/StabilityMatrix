@@ -29,16 +29,15 @@ public class ComfyClient : InferenceClientBase
     private readonly IComfyApi comfyApi;
     private bool isDisposed;
 
-    private readonly JsonSerializerOptions jsonSerializerOptions =
-        new()
+    private readonly JsonSerializerOptions jsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicies.SnakeCaseLower,
+        Converters =
         {
-            PropertyNamingPolicy = JsonNamingPolicies.SnakeCaseLower,
-            Converters =
-            {
-                new NodeConnectionBaseJsonConverter(),
-                new OneOfJsonConverter<string, StringNodeConnection>()
-            }
-        };
+            new NodeConnectionBaseJsonConverter(),
+            new OneOfJsonConverter<string, StringNodeConnection>(),
+        },
+    };
 
     // ReSharper disable once MemberCanBePrivate.Global
     public string ClientId { get; } = Guid.NewGuid().ToString();
@@ -111,20 +110,20 @@ public class ComfyClient : InferenceClientBase
         {
             Scheme = "ws",
             Path = "/ws",
-            Query = $"clientId={ClientId}"
+            Query = $"clientId={ClientId}",
         }.Uri;
 
         webSocketClient = new WebsocketClient(wsUri)
         {
             Name = nameof(ComfyClient),
-            ReconnectTimeout = TimeSpan.FromSeconds(30)
+            ReconnectTimeout = TimeSpan.FromSeconds(30),
         };
 
-        webSocketClient.DisconnectionHappened.Subscribe(
-            info => Logger.Info("Websocket Disconnected, ({Type})", info.Type)
+        webSocketClient.DisconnectionHappened.Subscribe(info =>
+            Logger.Info("Websocket Disconnected, ({Type})", info.Type)
         );
-        webSocketClient.ReconnectionHappened.Subscribe(
-            info => Logger.Info("Websocket Reconnected, ({Type})", info.Type)
+        webSocketClient.ReconnectionHappened.Subscribe(info =>
+            Logger.Info("Websocket Reconnected, ({Type})", info.Type)
         );
 
         webSocketClient.MessageReceived.Subscribe(OnMessageReceived);
@@ -287,7 +286,7 @@ public class ComfyClient : InferenceClientBase
             Array.Reverse(typeBytes);
         }*/
 
-        PreviewImageReceived?.Invoke(this, new ComfyWebSocketImageData { ImageBytes = data[8..], });
+        PreviewImageReceived?.Invoke(this, new ComfyWebSocketImageData { ImageBytes = data[8..] });
     }
 
     public override async Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -332,14 +331,25 @@ public class ComfyClient : InferenceClientBase
     )
     {
         var request = new ComfyPromptRequest { ClientId = ClientId, Prompt = nodes };
-        var result = await comfyApi.PostPrompt(request, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var result = await comfyApi.PostPrompt(request, cancellationToken).ConfigureAwait(false);
 
-        // Add task to dictionary and set it as the current task
-        var task = new ComfyTask(result.PromptId);
-        PromptTasks.TryAdd(result.PromptId, task);
-        currentPromptTask = task;
+            // Add task to dictionary and set it as the current task
+            var task = new ComfyTask(result.PromptId);
+            PromptTasks.TryAdd(result.PromptId, task);
+            currentPromptTask = task;
 
-        return task;
+            return task;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Failed to queue prompt. Request had {NodeCount} nodes", nodes.Count);
+            System.Diagnostics.Debug.WriteLine($"===== QUEUE PROMPT ERROR =====");
+            System.Diagnostics.Debug.WriteLine($"Exception: {ex}");
+            System.Diagnostics.Debug.WriteLine($"Inner: {ex.InnerException}");
+            throw;
+        }
     }
 
     public async Task InterruptPromptAsync(CancellationToken cancellationToken = default)
