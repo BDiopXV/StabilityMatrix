@@ -41,6 +41,12 @@ public class FallbackRamCachedWebImageLoader : RamCachedWebImageLoader
         // Try to load from local file first
         if (File.Exists(url))
         {
+            var extension = Path.GetExtension(url);
+            if (ImageMetadata.IsVideoExtension(extension))
+            {
+                return null;
+            }
+
             try
             {
                 if (!url.EndsWith("png", StringComparison.OrdinalIgnoreCase))

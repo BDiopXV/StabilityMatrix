@@ -1,0 +1,87 @@
+﻿<UserControl
+    x:Class="StabilityMatrix.Avalonia.Controls.VideoPlayerView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:StabilityMatrix.Avalonia.Controls"
+    xmlns:converters="clr-namespace:StabilityMatrix.Avalonia.Converters"
+    xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+    x:Name="Root"
+    x:DataType="controls:VideoPlayerView">
+    <UserControl.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Border
+            Grid.Row="0"
+            Margin="8"
+            Background="#FF1F1F1F"
+            ClipToBounds="True"
+            CornerRadius="4">
+            <vlc:VideoView
+                x:Name="PART_VideoView"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch" />
+        </Border>
+        <Border
+            Grid.Row="1"
+            Margin="0"
+            Padding="8"
+            VerticalAlignment="Bottom"
+            Background="#CC2E2E2E"
+            IsVisible="{Binding ShowControls, ElementName=Root}">
+            <StackPanel
+                HorizontalAlignment="Stretch"
+                Orientation="Vertical"
+                Spacing="8">
+                <ProgressBar
+                    Height="4"
+                    Background="#33000000"
+                    CornerRadius="2"
+                    Foreground="#FFB2F5FF"
+                    Maximum="1"
+                    Minimum="0"
+                    Value="{Binding PlaybackProgress}" />
+                <Button
+                    Width="48"
+                    Height="48"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Classes="primary"
+                    Click="OnPlayPauseButtonClick">
+                    <Grid Width="32" Height="32">
+                        <Path
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Data="M12,9 L22,16 L12,23 Z"
+                            Fill="#FFFFFFFF"
+                            IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBooleanConverter}}"
+                            Stretch="None" />
+                        <StackPanel
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding IsPlaying}"
+                            Orientation="Horizontal"
+                            Spacing="4">
+                            <Rectangle
+                                Width="4"
+                                Height="16"
+                                Fill="#FFFFFFFF"
+                                RadiusX="1"
+                                RadiusY="1" />
+                            <Rectangle
+                                Width="4"
+                                Height="16"
+                                Fill="#FFFFFFFF"
+                                RadiusX="1"
+                                RadiusY="1" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

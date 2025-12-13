@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncAwaitBestPractices;
@@ -12,8 +13,10 @@ using AsyncImageLoader;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using CommandLine;
+using LibVLCSharp.Shared;
 using NLog;
 using Polly.Contrib.WaitAndRetry;
 using Projektanker.Icons.Avalonia;
@@ -58,6 +61,9 @@ public static class Program
 
         SetDebugBuild();
 
+        RedirectAvaloniaStylingResolution();
+        LibVLCSharp.Shared.Core.Initialize();
+
         var parseResult = Parser
             .Default.ParseArguments<AppArgs>(args)
             .WithNotParsed(errors =>
@@ -69,8 +75,8 @@ public static class Program
             });
 
         if (
-            parseResult.Errors.Any(
-                x => x.Tag is ErrorType.HelpRequestedError or ErrorType.VersionRequestedError
+            parseResult.Errors.Any(x =>
+                x.Tag is ErrorType.HelpRequestedError or ErrorType.VersionRequestedError
             )
         )
         {
@@ -155,6 +161,24 @@ public static class Program
         }
     }
 
+    private static void RedirectAvaloniaStylingResolution()
+    {
+        AssemblyLoadContext.Default.Resolving += OnAvaloniaStylingResolving;
+    }
+
+    private static Assembly? OnAvaloniaStylingResolving(
+        AssemblyLoadContext context,
+        AssemblyName assemblyName
+    )
+    {
+        if (string.Equals(assemblyName.Name, "Avalonia.Styling", StringComparison.OrdinalIgnoreCase))
+        {
+            return typeof(Style).Assembly;
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Called in <see cref="BuildAvaloniaApp"/> and UI tests to setup static configurations
     /// </summary>
@@ -172,7 +196,7 @@ public static class Program
             {
                 BaseCachePath = Path.Combine(Path.GetTempPath(), "StabilityMatrix", "Cache"),
                 CacheDuration = TimeSpan.FromDays(1),
-                MaxMemoryCacheCount = 100
+                MaxMemoryCacheCount = 100,
             }
         );
     }
@@ -198,7 +222,7 @@ public static class Program
             app = app.With(
                 new Win32PlatformOptions
                 {
-                    RenderingMode = [Win32RenderingMode.Wgl, Win32RenderingMode.Software]
+                    RenderingMode = [Win32RenderingMode.Wgl, Win32RenderingMode.Software],
                 }
             );
         }
@@ -216,7 +240,7 @@ public static class Program
                 .With(
                     new AvaloniaNativePlatformOptions
                     {
-                        RenderingMode = new[] { AvaloniaNativeRenderingMode.Software }
+                        RenderingMode = new[] { AvaloniaNativeRenderingMode.Software },
                     }
                 );
         }
@@ -421,7 +445,7 @@ public static class Program
         {
             var dialog = new ExceptionDialog
             {
-                DataContext = new ExceptionViewModel { Exception = ex, SentryId = sentryId }
+                DataContext = new ExceptionViewModel { Exception = ex, SentryId = sentryId },
             };
 
             // We can only show dialog if main window exists, and is visible

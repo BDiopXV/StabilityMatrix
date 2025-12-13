@@ -19,6 +19,8 @@ namespace StabilityMatrix.Avalonia.ViewModels.Inference;
 [RegisterScoped<InferenceWan22ImageToVideoViewModel>, ManagedService]
 public class InferenceWan22ImageToVideoViewModel : InferenceGenerationViewModelBase, IParametersLoadableState
 {
+    protected override bool ShouldEnableVideoPlayer => true;
+
     [JsonIgnore]
     public StackCardViewModel StackCardViewModel { get; }
 

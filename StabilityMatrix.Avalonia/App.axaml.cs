@@ -22,6 +22,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using FluentAvalonia.Interop;
 using FluentAvalonia.UI.Controls;
+using LibVLCSharp.Shared;
 using MessagePipe;
 using MessagePipe.Interprocess.Workers;
 using Microsoft.Extensions.Configuration;
@@ -466,6 +467,8 @@ public sealed class App : Application
 
         if (!Design.IsDesignMode)
         {
+            services.AddSingleton(provider => new LibVLC());
+            services.AddSingleton<IDisposable>(provider => provider.GetRequiredService<LibVLC>());
             services.AddSingleton<ILiteDbContext, LiteDbContext>();
             services.AddSingleton<IDisposable>(p => p.GetRequiredService<ILiteDbContext>());
         }

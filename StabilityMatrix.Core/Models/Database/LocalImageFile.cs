@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using DynamicData.Tests;
 using MetadataExtractor.Formats.Exif;
@@ -63,9 +65,27 @@ public record LocalImageFile
         string? ParametersJson,
         string? SMProject,
         string? ComfyNodes,
-        string? CivitParameters
+        string? CivitParameters,
+        GenerationParameters? VideoGenerationParameters
     ) ReadMetadata()
     {
+        var extension = Path.GetExtension(AbsolutePath);
+
+        if (ImageMetadata.IsVideoExtension(extension))
+        {
+            var videoParameters = ImageMetadata.ParseVideoGenerationParameters(new FilePath(AbsolutePath));
+            return (
+                videoParameters?.PositivePrompt,
+                videoParameters?.NegativePrompt,
+                null,
+                null,
+                null,
+                null,
+                null,
+                videoParameters
+            );
+        }
+
         if (AbsolutePath.EndsWith("webp"))
         {
             var paramsJson = ImageMetadata.ReadTextChunkFromWebp(
@@ -74,7 +94,7 @@ public record LocalImageFile
             );
             var smProj = ImageMetadata.ReadTextChunkFromWebp(AbsolutePath, ExifDirectoryBase.TagSoftware);
 
-            return (null, null, null, paramsJson, smProj, null, null);
+            return (null, null, null, paramsJson, smProj, null, null, null);
         }
 
         using var stream = new FileStream(AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -112,7 +132,8 @@ public record LocalImageFile
             string.IsNullOrEmpty(parametersJson) ? null : parametersJson,
             string.IsNullOrEmpty(smProject) ? null : smProject,
             string.IsNullOrEmpty(comfyNodes) ? null : comfyNodes,
-            string.IsNullOrEmpty(civitParameters) ? null : civitParameters
+            string.IsNullOrEmpty(civitParameters) ? null : civitParameters,
+            null
         );
     }
 
@@ -120,6 +141,21 @@ public record LocalImageFile
     {
         // TODO: Support other types
         const LocalImageFileType imageType = LocalImageFileType.Inference | LocalImageFileType.TextToImage;
+
+        if (ImageMetadata.IsVideoExtension(filePath.Extension))
+        {
+            filePath.Info.Refresh();
+
+            return new LocalImageFile
+            {
+                AbsolutePath = filePath,
+                ImageType = imageType,
+                CreatedAt = filePath.Info.CreationTimeUtc,
+                LastModifiedAt = filePath.Info.LastWriteTimeUtc,
+                GenerationParameters = ImageMetadata.ParseVideoGenerationParameters(filePath),
+                ImageSize = new Size(0, 0),
+            };
+        }
 
         if (filePath.Extension.Equals(".webp", StringComparison.OrdinalIgnoreCase))
         {
@@ -249,4 +285,9 @@ public record LocalImageFile
         ".gif",
         ".webp",
     ];
+
+    static LocalImageFile()
+    {
+        SupportedImageExtensions.UnionWith(ImageMetadata.VideoFileExtensions);
+    }
 }

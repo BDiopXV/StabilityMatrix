@@ -108,6 +108,10 @@
         <PackageReference Include="FuzzySharp" />
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="KeyedSemaphores" />
+        <PackageReference Include="LibVLCSharp" />
+        <PackageReference Include="LibVLCSharp.Avalonia" />
+        <!-- <PackageReference Include="LibVLCSharp.WinForms" /> -->
+        <PackageReference Include="VideoLAN.LibVLC.Windows" />
         <PackageReference Include="Markdig" />
         <PackageReference Include="Markdown.Avalonia" />
         <PackageReference Include="MessagePipe" />
@@ -147,6 +151,7 @@
     </ItemGroup>
 
 
+
     <ItemGroup>
         <AvaloniaResource Include="Assets\Icon.ico" />
         <AvaloniaResource Include="Assets\Icon.png" />
@@ -154,7 +159,10 @@
         <AvaloniaResource Include="Assets\santahat.png" />
         <AvaloniaResource Include="Assets\markdown.css" />
         <AvaloniaResource Include="Assets\openai-white-logomark.png" />
+      <AvaloniaResource Include="Assets\play-icon.svg" />
+      <AvaloniaResource Include="Assets\pause-icon.svg" />
     </ItemGroup>
+
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\ImagePrompt.tmLanguage.json" />

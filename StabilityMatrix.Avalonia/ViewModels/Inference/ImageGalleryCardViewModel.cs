@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Media;
@@ -44,6 +45,12 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
     private ImageSource? selectedImage;
 
     [ObservableProperty]
+    private bool isVideoPlayerEnabled;
+
+    [ObservableProperty]
+    private bool isVideoPlayerReady = true;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanNavigateBack), nameof(CanNavigateForward))]
     private int selectedImageIndex;
 
@@ -54,6 +61,13 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
 
     public bool CanNavigateBack => SelectedImageIndex > 0;
     public bool CanNavigateForward => SelectedImageIndex < ImageSources.Count - 1;
+
+    public bool IsVideoPlayerVisible =>
+        IsVideoPlayerEnabled
+        && IsVideoPlayerReady
+        && SelectedImage?.TemplateKey == ImageSourceTemplateType.Video;
+
+    public bool IsImageCarouselVisible => !IsVideoPlayerVisible;
 
     public ImageGalleryCardViewModel(
         IServiceManager<ViewModelBase> vmFactory,
@@ -135,7 +149,57 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
                 OnPropertyChanged(nameof(CanNavigateForward));
                 OnPropertyChanged(nameof(HasMultipleImages));
             }
+
+            if (e.NewItems is not null)
+            {
+                foreach (var newSource in e.NewItems.OfType<ImageSource>())
+                {
+                    RefreshTemplateKeyAsync(newSource);
+                }
+            }
         }
+    }
+
+    partial void OnSelectedImageChanged(ImageSource? value)
+    {
+        OnPropertyChanged(nameof(IsVideoPlayerVisible));
+        OnPropertyChanged(nameof(IsImageCarouselVisible));
+    }
+
+    partial void OnIsVideoPlayerEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsVideoPlayerVisible));
+        OnPropertyChanged(nameof(IsImageCarouselVisible));
+    }
+
+    partial void OnIsVideoPlayerReadyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsVideoPlayerVisible));
+        OnPropertyChanged(nameof(IsImageCarouselVisible));
+    }
+
+    private void RefreshTemplateKeyAsync(ImageSource imageSource)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await imageSource.GetOrRefreshTemplateKeyAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to refresh template key for {Uri}", imageSource.Uri);
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (ReferenceEquals(imageSource, SelectedImage))
+                {
+                    OnPropertyChanged(nameof(IsVideoPlayerVisible));
+                    OnPropertyChanged(nameof(IsImageCarouselVisible));
+                }
+            });
+        });
     }
 
     [RelayCommand]

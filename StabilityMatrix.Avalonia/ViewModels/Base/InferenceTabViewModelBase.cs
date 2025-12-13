@@ -211,10 +211,33 @@ public abstract partial class InferenceTabViewModelBase
             string? ParametersJson,
             string? SMProject,
             string? ComfyNodes,
-            string? CivitParameters
+            string? CivitParameters,
+            GenerationParameters? VideoGenerationParameters
         ) metadata
     )
     {
+        void ApplyParameters(GenerationParameters parameters)
+        {
+            if (this is IParametersLoadableState paramsLoadableVm)
+            {
+                Dispatcher.UIThread.Invoke(() => paramsLoadableVm.LoadStateFromParameters(parameters));
+            }
+            else
+            {
+                Logger.Warn(
+                    "Load parameters target {Type} does not implement IParametersLoadableState, skipping",
+                    GetType().Name
+                );
+            }
+
+            if (this is IImageGalleryComponent imageGalleryComponent)
+            {
+                Dispatcher.UIThread.Invoke(() =>
+                    imageGalleryComponent.LoadImagesToGallery(new ImageSource(imageFilePath))
+                );
+            }
+        }
+
         // Has SMProject metadata
         if (metadata.SMProject is not null)
         {
@@ -253,6 +276,13 @@ public abstract partial class InferenceTabViewModelBase
             }
         }
 
+        if (metadata.VideoGenerationParameters is { } videoParameters)
+        {
+            Logger.Info("Loading Parameters from video metadata");
+            ApplyParameters(videoParameters);
+            return;
+        }
+
         // Has generic metadata
         if (metadata.Parameters is not null)
         {
@@ -263,26 +293,7 @@ public abstract partial class InferenceTabViewModelBase
                 throw new ApplicationException("Failed to parse parameters");
             }
 
-            if (this is IParametersLoadableState paramsLoadableVm)
-            {
-                Dispatcher.UIThread.Invoke(() => paramsLoadableVm.LoadStateFromParameters(parameters));
-            }
-            else
-            {
-                Logger.Warn(
-                    "Load parameters target {Type} does not implement IParametersLoadableState, skipping",
-                    GetType().Name
-                );
-            }
-
-            // Load image
-            if (this is IImageGalleryComponent imageGalleryComponent)
-            {
-                Dispatcher.UIThread.Invoke(() =>
-                    imageGalleryComponent.LoadImagesToGallery(new ImageSource(imageFilePath))
-                );
-            }
-
+            ApplyParameters(parameters);
             return;
         }
 
@@ -296,26 +307,7 @@ public abstract partial class InferenceTabViewModelBase
                 throw new ApplicationException("Failed to parse parameters");
             }
 
-            if (this is IParametersLoadableState paramsLoadableVm)
-            {
-                Dispatcher.UIThread.Invoke(() => paramsLoadableVm.LoadStateFromParameters(parameters));
-            }
-            else
-            {
-                Logger.Warn(
-                    "Load parameters target {Type} does not implement IParametersLoadableState, skipping",
-                    GetType().Name
-                );
-            }
-
-            // Load image
-            if (this is IImageGalleryComponent imageGalleryComponent)
-            {
-                Dispatcher.UIThread.Invoke(() =>
-                    imageGalleryComponent.LoadImagesToGallery(new ImageSource(imageFilePath))
-                );
-            }
-
+            ApplyParameters(parameters);
             return;
         }
 

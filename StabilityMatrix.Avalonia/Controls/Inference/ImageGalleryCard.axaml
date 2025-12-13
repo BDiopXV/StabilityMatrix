@@ -2,11 +2,11 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:StabilityMatrix.Avalonia.Controls"
+    xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
     xmlns:mocks="clr-namespace:StabilityMatrix.Avalonia.DesignData"
     xmlns:models="clr-namespace:StabilityMatrix.Avalonia.Models"
-    xmlns:vmInference="clr-namespace:StabilityMatrix.Avalonia.ViewModels.Inference"
-    xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
     xmlns:vendorLabs="clr-namespace:StabilityMatrix.Avalonia.Controls.VendorLabs"
+    xmlns:vmInference="clr-namespace:StabilityMatrix.Avalonia.ViewModels.Inference"
     x:DataType="vmInference:ImageGalleryCardViewModel">
 
     <Design.PreviewWith>
@@ -16,6 +16,11 @@
     </Design.PreviewWith>
 
     <Style Selector="controls|ImageGalleryCard">
+        <Style.Resources>
+            <DataTemplate x:Key="VideoPlayerTemplate" DataType="{x:Type models:ImageSource}">
+                <controls:VideoPlayerView Source="{Binding}" />
+            </DataTemplate>
+        </Style.Resources>
         <!--  Set Defaults  -->
         <Setter Property="Template">
             <ControlTemplate>
@@ -27,19 +32,29 @@
                     VerticalContentAlignment="{TemplateBinding VerticalAlignment}">
 
                     <Grid RowDefinitions="*,Auto">
-                        
+
+                        <Border
+                            Margin="0,0,0,4"
+                            VerticalAlignment="Stretch"
+                            Classes="theme-dark"
+                            CornerRadius="4"
+                            IsVisible="{Binding IsVideoPlayerVisible}">
+                            <ContentControl Content="{Binding SelectedImage}" ContentTemplate="{StaticResource VideoPlayerTemplate}" />
+                        </Border>
+
                         <Grid.Styles>
                             <Style Selector="ListBox /template/ VirtualizingStackPanel">
                                 <Setter Property="Orientation" Value="Horizontal" />
                             </Style>
                         </Grid.Styles>
-                        
+
                         <!--  Main image view  -->
                         <Border
-                            Classes="theme-dark"
+                            Margin="0,0,0,4"
                             VerticalAlignment="Stretch"
+                            Classes="theme-dark"
                             CornerRadius="4"
-                            Margin="0,0,0,4">
+                            IsVisible="{Binding IsImageCarouselVisible}">
                             <Grid x:Name="MainGrid">
                                 <Grid.Styles>
                                     <Style Selector="controls|AdvancedImageBox">
@@ -57,23 +72,13 @@
                                     SelectedItem="{Binding SelectedImage}"
                                     SourcePageType="controls:AdvancedImageBoxView" />
 
-                                <Border
-                                    ClipToBounds="True"
-                                    CornerRadius="4"
-                                    IsVisible="{Binding IsPreviewOverlayEnabled}">
-                                    <Image
-                                        Source="{Binding PreviewImage}"
-                                        Stretch="Uniform"
-                                        StretchDirection="Both" />
-                                </Border>
-
                                 <!--  Left button  -->
                                 <Border
                                     Grid.Column="0"
                                     Margin="4"
-                                    IsVisible="{Binding HasMultipleImages}"
                                     HorizontalAlignment="Left"
-                                    VerticalAlignment="Center">
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding HasMultipleImages}">
                                     <Button
                                         Padding="10,20"
                                         Classes="transparent"
@@ -86,9 +91,9 @@
                                 <!--  Right button  -->
                                 <Border
                                     Margin="4"
-                                    IsVisible="{Binding HasMultipleImages}"
                                     HorizontalAlignment="Right"
-                                    VerticalAlignment="Center">
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding HasMultipleImages}">
                                     <Button
                                         Padding="10,20"
                                         Classes="transparent"
@@ -101,12 +106,24 @@
                             </Grid>
                         </Border>
 
+                        <Border
+                            Grid.Row="0"
+                            Margin="0,0,0,4"
+                            ClipToBounds="True"
+                            CornerRadius="4"
+                            IsVisible="{Binding IsPreviewOverlayEnabled}">
+                            <Image
+                                Source="{Binding PreviewImage}"
+                                Stretch="Uniform"
+                                StretchDirection="Both" />
+                        </Border>
+
                         <!--  Thumbnails  -->
                         <ListBox
                             Grid.Row="1"
+                            MinHeight="65"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Stretch"
-                            MinHeight="65"
                             ItemsSource="{Binding ImageSources}"
                             SelectedItem="{Binding SelectedImage}"
                             SelectionMode="AlwaysSelected">

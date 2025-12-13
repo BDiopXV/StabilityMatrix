@@ -124,6 +124,18 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
             return true;
         }
 
+        // Add MP4 and other video format support
+        if (
+            extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webm", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".avi", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            TemplateKey = ImageSourceTemplateType.Video;
+            return true;
+        }
+
         TemplateKey = ImageSourceTemplateType.Image;
 
         return true;
@@ -152,6 +164,12 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
     {
         if (Bitmap?.Format != null)
             return Bitmap;
+
+        // Skip bitmap loading for video files
+        if (TemplateKey == ImageSourceTemplateType.Video)
+        {
+            return null;
+        }
 
         var loader = ImageLoader.AsyncImageLoader;
 

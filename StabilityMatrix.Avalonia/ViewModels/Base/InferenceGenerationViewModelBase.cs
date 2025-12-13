@@ -58,6 +58,8 @@ public abstract partial class InferenceGenerationViewModelBase
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+    protected virtual bool ShouldEnableVideoPlayer => false;
+
     private readonly ISettingsManager settingsManager;
     private readonly RunningPackageService runningPackageService;
     private readonly INotificationService notificationService;
@@ -93,6 +95,7 @@ public abstract partial class InferenceGenerationViewModelBase
         ClientManager = inferenceClientManager;
 
         ImageGalleryCardViewModel = vmFactory.Get<ImageGalleryCardViewModel>();
+        ImageGalleryCardViewModel.IsVideoPlayerEnabled = ShouldEnableVideoPlayer;
         ImageFolderCardViewModel = AddDisposable(vmFactory.Get<ImageFolderCardViewModel>());
 
         GenerateImageCommand.WithConditionalNotificationErrorHandler(notificationService);
@@ -143,7 +146,7 @@ public abstract partial class InferenceGenerationViewModelBase
         {
             GenerationParameters = args.Parameters,
             ProjectType = args.Project?.ProjectType,
-            ProjectName = ProjectFile?.NameWithoutExtension
+            ProjectName = ProjectFile?.NameWithoutExtension,
         };
 
         // Parse to format
@@ -260,7 +263,7 @@ public abstract partial class InferenceGenerationViewModelBase
             Project = InferenceProjectDocument.FromLoadable(this),
             FilesToTransfer = args.FilesToTransfer,
             Parameters = new GenerationParameters(),
-            ClearOutputImages = true
+            ClearOutputImages = true,
         };
 
         await RunGeneration(generationArgs, cancellationToken);
@@ -274,6 +277,8 @@ public abstract partial class InferenceGenerationViewModelBase
     {
         var client = args.Client;
         var nodes = args.Nodes;
+
+        Dispatcher.UIThread.Post(() => ImageGalleryCardViewModel.IsVideoPlayerReady = false);
 
         // Checks
         if (args.Parameters is null)
@@ -410,7 +415,7 @@ public abstract partial class InferenceGenerationViewModelBase
                 {
                     Title = "Prompt Completed",
                     Body = $"Prompt [{promptTask.Id[..7].ToLower()}] completed successfully",
-                    BodyImagePath = notificationImage?.FullPath
+                    BodyImagePath = notificationImage?.FullPath,
                 }
             );
         }
@@ -424,6 +429,7 @@ public abstract partial class InferenceGenerationViewModelBase
             // ImageGalleryCardViewModel.PreviewImage?.Dispose();
             ImageGalleryCardViewModel.PreviewImage = null;
             ImageGalleryCardViewModel.IsPreviewOverlayEnabled = false;
+            Dispatcher.UIThread.Post(() => ImageGalleryCardViewModel.IsVideoPlayerReady = true);
 
             // Cleanup tasks
             promptTask?.Dispose();
@@ -475,7 +481,6 @@ public abstract partial class InferenceGenerationViewModelBase
             await imageStream.CopyToAsync(ms);
 
             var imageArray = ms.ToArray();
-            outputImagesBytes.Add(imageArray);
 
             var parameters = args.Parameters!;
             var project = args.Project!;
@@ -514,6 +519,7 @@ public abstract partial class InferenceGenerationViewModelBase
                 );
 
                 outputImages.Add(new ImageSource(filePath) { Label = imageLabel });
+                outputImagesBytes.Add(bytesWithMetadata);
                 EventManager.Instance.OnImageFileAdded(filePath);
             }
             else if (comfyImage.FileName.EndsWith(".webp"))
@@ -521,14 +527,14 @@ public abstract partial class InferenceGenerationViewModelBase
                 var opts = new JsonSerializerOptions
                 {
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    Converters = { new JsonStringEnumConverter() }
+                    Converters = { new JsonStringEnumConverter() },
                 };
                 var paramsJson = JsonSerializer.Serialize(parameters, opts);
                 var smProject = JsonSerializer.Serialize(project, opts);
                 var metadata = new Dictionary<ExifTag, string>
                 {
                     { ExifTag.ImageDescription, paramsJson },
-                    { ExifTag.Software, smProject }
+                    { ExifTag.Software, smProject },
                 };
 
                 var bytesWithMetadata = ImageMetadata.AddMetadataToWebp(imageArray, metadata);
@@ -543,26 +549,36 @@ public abstract partial class InferenceGenerationViewModelBase
                 );
 
                 outputImages.Add(new ImageSource(filePath) { Label = imageLabel });
+                outputImagesBytes.Add(bytesWithMetadata.ToArray());
                 EventManager.Instance.OnImageFileAdded(filePath);
             }
             else
             {
-                // Write using generated name
+                // Handle MP4, WebM, and other binary files (no metadata embedding)
+                var fileExtension = Path.GetExtension(comfyImage.FileName).Replace(".", "");
+
                 var filePath = await WriteOutputImageAsync(
                     new MemoryStream(imageArray),
                     args,
                     i + 1,
                     images.Count,
-                    fileExtension: Path.GetExtension(comfyImage.FileName).Replace(".", "")
+                    fileExtension: fileExtension
                 );
 
-                outputImages.Add(new ImageSource(filePath) { Label = imageLabel });
+                // ImageSource will auto-detect video format
+                var source = new ImageSource(filePath) { Label = imageLabel };
+                outputImages.Add(source);
                 EventManager.Instance.OnImageFileAdded(filePath);
+                Logger.Debug(
+                    "Saved output file: {FilePath} (auto-detected as {FileExtension})",
+                    filePath,
+                    fileExtension
+                );
             }
         }
 
-        // Download all images to make grid, if multiple
-        if (outputImages.Count > 1)
+        // Only create grid for actual images, not videos
+        if (outputImages.Count > 1 && outputImagesBytes.Count > 0)
         {
             var loadedImages = outputImagesBytes.Select(SKImage.FromEncodedData).ToImmutableArray();
 
@@ -588,11 +604,23 @@ public abstract partial class InferenceGenerationViewModelBase
             EventManager.Instance.OnImageFileAdded(gridPath);
         }
 
+        // Preload bitmaps only for images (videos will return null from GetBitmapAsync)
         foreach (var img in outputImages)
         {
-            // Preload
-            await img.GetBitmapAsync();
-            // Add images
+            try
+            {
+                await img.GetOrRefreshTemplateKeyAsync();
+                // Only preload bitmap if it's not a video
+                if (await img.TemplateKeyAsync is not ImageSourceTemplateType.Video)
+                {
+                    await img.GetBitmapAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to process output: {FilePath}", img.LocalFile?.FullPath);
+            }
+
             ImageGalleryCardViewModel.ImageSources.Add(img);
         }
 
@@ -779,7 +807,7 @@ public abstract partial class InferenceGenerationViewModelBase
             {
                 ShowDialogOnStart = true,
                 ModificationCompleteTitle = "Extensions Installed",
-                ModificationCompleteMessage = "Finished installing required extensions"
+                ModificationCompleteMessage = "Finished installing required extensions",
             };
             EventManager.Instance.OnPackageInstallProgressAdded(runner);
 
@@ -906,7 +934,7 @@ public abstract partial class InferenceGenerationViewModelBase
             {
                 Builder = Builder,
                 IsEnabledOverrides = overrides,
-                FilesToTransfer = FilesToTransfer
+                FilesToTransfer = FilesToTransfer,
             };
         }
 

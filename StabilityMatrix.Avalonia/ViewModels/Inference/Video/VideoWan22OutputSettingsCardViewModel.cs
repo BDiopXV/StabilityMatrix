@@ -75,9 +75,9 @@ public partial class VideoWan22OutputSettingsCardViewModel
             {
                 Name = e.Builder.Nodes.GetUniqueName("VHS_VideoCombine"),
                 Images = image,
-                FrameRate = (double)((int)(Fps * 1.5)),
+                FrameRate = Fps,
                 FilenamePrefix = "Wan22Video",
-                Format = "video/ffmpeg-gif",
+                Format = "video/h264-mp4",
                 SaveOutput = true,
             }
         );

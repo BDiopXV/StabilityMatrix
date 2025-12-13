@@ -414,17 +414,22 @@ public class ComfyClient : InferenceClientBase
         CancellationToken cancellationToken = default
     )
     {
-        // Get history for images
         var history = await comfyApi.GetHistory(promptId, cancellationToken).ConfigureAwait(false);
-
-        // Get the current prompt history
         var current = history[promptId];
 
         var dict = new Dictionary<string, List<ComfyImage>?>();
         foreach (var (nodeKey, output) in current.Outputs)
         {
-            dict[nodeKey] = output.Images;
+            // Combine images, videos, and files so downstream processing sees MP4s
+            var combined = new List<ComfyImage>();
+            if (output.Images is { Count: > 0 })
+                combined.AddRange(output.Images);
+            if (output.Videos is { Count: > 0 })
+                combined.AddRange(output.Videos);
+
+            dict[nodeKey] = combined.Count > 0 ? combined : null;
         }
+
         return dict;
     }
 

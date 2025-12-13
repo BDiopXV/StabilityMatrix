@@ -109,7 +109,18 @@ public partial class OutputsPageViewModel : PageViewModelBase
             ? Resources.Label_OneImageSelected
             : string.Format(Resources.Label_NumImagesSelected, NumItemsSelected);
 
-    private string[] allowedExtensions = [".png", ".webp", ".jpg", ".jpeg", ".gif"];
+    private string[] allowedExtensions =
+    [
+        ".png",
+        ".webp",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".mp4",
+        ".webm",
+        ".mov",
+        ".avi",
+    ];
 
     private TreeViewDirectory? lastOutputCategory;
 
