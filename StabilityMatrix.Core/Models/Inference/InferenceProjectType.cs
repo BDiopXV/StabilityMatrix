@@ -12,4 +12,5 @@ public enum InferenceProjectType
     WanTextToVideo,
     WanImageToVideo,
     Wan22ImageToVideo,
+    ZITTextToImage,
 }

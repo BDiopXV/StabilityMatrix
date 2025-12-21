@@ -16,6 +16,7 @@ public static class InferenceProjectTypeExtensions
             InferenceProjectType.Upscale => typeof(InferenceImageUpscaleViewModel),
             InferenceProjectType.ImageToVideo => typeof(InferenceImageToVideoViewModel),
             InferenceProjectType.FluxTextToImage => typeof(InferenceFluxTextToImageViewModel),
+            InferenceProjectType.ZITTextToImage => typeof(InferenceZITTextToImageViewModel),
             InferenceProjectType.WanTextToVideo => typeof(InferenceWanTextToVideoViewModel),
             InferenceProjectType.WanImageToVideo => typeof(InferenceWanImageToVideoViewModel),
             InferenceProjectType.Wan22ImageToVideo => typeof(InferenceWan22ImageToVideoViewModel),

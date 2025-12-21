@@ -688,6 +688,11 @@ public class ComfyNodeBuilder
         public required double Guidance { get; init; }
     }
 
+    public record ConditioningZeroOut : ComfyTypedNodeBase<ConditioningNodeConnection>
+    {
+        public required ConditioningNodeConnection Conditioning { get; init; }
+    }
+
     public record BasicGuider : ComfyTypedNodeBase<GuiderNodeConnection>
     {
         public required ModelNodeConnection Model { get; init; }

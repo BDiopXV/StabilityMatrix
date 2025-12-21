@@ -38,6 +38,7 @@ public class InferenceProjectDocument : ICloneable
                 InferenceImageUpscaleViewModel => InferenceProjectType.Upscale,
                 InferenceImageToVideoViewModel => InferenceProjectType.ImageToVideo,
                 InferenceFluxTextToImageViewModel => InferenceProjectType.FluxTextToImage,
+                InferenceZITTextToImageViewModel => InferenceProjectType.ZITTextToImage,
                 InferenceWanImageToVideoViewModel => InferenceProjectType.WanImageToVideo,
                 InferenceWan22ImageToVideoViewModel => InferenceProjectType.Wan22ImageToVideo,
                 InferenceWanTextToVideoViewModel => InferenceProjectType.WanTextToVideo,

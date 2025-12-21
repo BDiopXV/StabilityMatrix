@@ -52,6 +52,12 @@
                     ToolTip.Tip="Text to Image" />
                 <ui:CommandBarButton
                     Click="AddTabMenu_OnClick"
+                    IconSource="FullScreenMaximize"
+                    Label="ZImage Turbo Text to Image"
+                    Tag="{x:Static inference:InferenceProjectType.ZITTextToImage}"
+                    ToolTip.Tip="ZImage Turbo Text to Image" />
+                <ui:CommandBarButton
+                    Click="AddTabMenu_OnClick"
                     IconSource="ImageCopy"
                     Label="Image to Image"
                     Tag="{x:Static inference:InferenceProjectType.ImageToImage}"

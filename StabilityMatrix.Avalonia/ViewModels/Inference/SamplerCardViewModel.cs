@@ -436,6 +436,70 @@ public partial class SamplerCardViewModel : LoadableViewModelBase, IParametersLo
         e.Builder.Connections.BaseSamplerTemporaryArgs = e.Temp;
     }
 
+    /// <summary>
+    /// Applies initial sampler setup for ZImage models using a simple KSampler
+    /// </summary>
+    public void ApplyStepsInitialZImageSampler(ModuleApplyStepEventArgs e)
+    {
+        // Provide temp values
+        e.Temp = e.CreateTempFromBuilder();
+
+        // Apply steps from our addons
+        ApplyAddonSteps(e);
+
+        // Get primary as latent using vae
+        var primaryLatent = e.Builder.GetPrimaryAsLatent(
+            e.Temp.Primary!.Unwrap(),
+            e.Builder.Connections.GetDefaultVAE()
+        );
+
+        // Set primary sampler and scheduler
+        var primarySampler = SelectedSampler ?? throw new ValidationException("Sampler not selected");
+        e.Builder.Connections.PrimarySampler = primarySampler;
+
+        var primaryScheduler = SelectedScheduler ?? throw new ValidationException("Scheduler not selected");
+        e.Builder.Connections.PrimaryScheduler = primaryScheduler;
+
+        // for later inheritance if needed
+        e.Builder.Connections.PrimaryCfg = CfgScale;
+        e.Builder.Connections.PrimarySteps = Steps;
+        e.Builder.Connections.PrimaryModelType = SelectedModelType;
+
+        // Use Temp Conditioning that may be modified by addons
+        var conditioning = e.Temp.Base.Conditioning.Unwrap();
+
+        // ConditioningZeroOut for negative conditioning (ZImage style)
+        var conditioningZeroOut = e.Nodes.AddTypedNode(
+            new ComfyNodeBuilder.ConditioningZeroOut
+            {
+                Name = e.Nodes.GetUniqueName(nameof(ComfyNodeBuilder.ConditioningZeroOut)),
+                Conditioning = conditioning.Positive,
+            }
+        );
+
+        // Simple KSampler for ZImage
+        var sampler = e.Nodes.AddTypedNode(
+            new ComfyNodeBuilder.KSampler
+            {
+                Name = "Sampler",
+                Model = e.Temp.Base.Model!.Unwrap(),
+                Seed = e.Builder.Connections.Seed,
+                SamplerName = primarySampler.Name,
+                Scheduler = primaryScheduler.Name,
+                Steps = Steps,
+                Cfg = CfgScale,
+                Positive = conditioning.Positive,
+                Negative = conditioningZeroOut.Output,
+                LatentImage = primaryLatent,
+                Denoise = IsDenoiseStrengthEnabled ? DenoiseStrength : 1.0d,
+            }
+        );
+
+        e.Builder.Connections.Primary = sampler.Output;
+
+        e.Builder.Connections.BaseSamplerTemporaryArgs = e.Temp;
+    }
+
     private void ApplyStepsInitialSampler(ModuleApplyStepEventArgs e)
     {
         // Get primary as latent using vae

@@ -175,10 +175,9 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
             return;
         }
 
-        var comfyViewModel = newItems.FirstOrDefault(
-            vm =>
-                vm.RunningPackage.InstalledPackage.Id == selectedPackageId
-                || vm.RunningPackage.BasePackage is ComfyUI
+        var comfyViewModel = newItems.FirstOrDefault(vm =>
+            vm.RunningPackage.InstalledPackage.Id == selectedPackageId
+            || vm.RunningPackage.BasePackage is ComfyUI
         );
 
         if (comfyViewModel is null && RunningPackage?.BasePackage is ComfyUI)
@@ -291,7 +290,7 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
                         {
                             IsOpen = false,
                             IsSelected = false,
-                            CurrentTabIndex = -1
+                            CurrentTabIndex = -1,
                         }
                     );
                 }
@@ -361,8 +360,8 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
             return;
         }
 
-        var entry = await liteDbContext.InferenceProjects.FindOneAsync(
-            p => p.FilePath == projectFile.ToString()
+        var entry = await liteDbContext.InferenceProjects.FindOneAsync(p =>
+            p.FilePath == projectFile.ToString()
         );
 
         // Create if not found
@@ -547,7 +546,7 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
                     {
                         Patterns = new[] { "*.smproj" },
                         MimeTypes = new[] { "application/json" },
-                    }
+                    },
                 },
                 SuggestedStartLocation = startDir,
                 DefaultExtension = ".smproj",
@@ -720,8 +719,10 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
             InferenceProjectType.ImageToImage => scope.ServiceManager.Get<InferenceImageToImageViewModel>(),
             InferenceProjectType.ImageToVideo => scope.ServiceManager.Get<InferenceImageToVideoViewModel>(),
             InferenceProjectType.Upscale => scope.ServiceManager.Get<InferenceImageUpscaleViewModel>(),
-            InferenceProjectType.FluxTextToImage
-                => scope.ServiceManager.Get<InferenceFluxTextToImageViewModel>(),
+            InferenceProjectType.FluxTextToImage =>
+                scope.ServiceManager.Get<InferenceFluxTextToImageViewModel>(),
+            InferenceProjectType.ZITTextToImage =>
+                scope.ServiceManager.Get<InferenceZITTextToImageViewModel>(),
         };
 
         switch (vm)
@@ -741,6 +742,9 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
                 imgToVidVm.SelectImageCardViewModel.ImageSource = new ImageSource(imageFile.AbsolutePath);
                 break;
             case InferenceFluxTextToImageViewModel _:
+                vm.LoadImageMetadata(imageFile.AbsolutePath);
+                break;
+            case InferenceZITTextToImageViewModel _:
                 vm.LoadImageMetadata(imageFile.AbsolutePath);
                 break;
         }
@@ -774,7 +778,7 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
                     {
                         Patterns = new[] { "*.smproj" },
                         MimeTypes = new[] { "application/json" },
-                    }
+                    },
                 },
                 SuggestedStartLocation = startDir,
             }
