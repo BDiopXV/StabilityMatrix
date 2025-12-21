@@ -46,6 +46,11 @@ public partial class VideoPlayerView : UserControl, IDisposable
         bool
     >(nameof(AutoPlay), true);
 
+    public static readonly StyledProperty<Thickness> VideoMarginProperty = AvaloniaProperty.Register<
+        VideoPlayerView,
+        Thickness
+    >(nameof(VideoMargin), new Thickness(8));
+
     public static readonly StyledProperty<double> PlaybackRateProperty = AvaloniaProperty.Register<
         VideoPlayerView,
         double
@@ -93,6 +98,12 @@ public partial class VideoPlayerView : UserControl, IDisposable
     {
         get => GetValue(PlaybackRateProperty);
         set => SetValue(PlaybackRateProperty, value);
+    }
+
+    public Thickness VideoMargin
+    {
+        get => GetValue(VideoMarginProperty);
+        set => SetValue(VideoMarginProperty, value);
     }
 
     static VideoPlayerView()

@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using AsyncImageLoader;
@@ -41,12 +43,27 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
     /// </summary>
     public string? Label { get; set; }
 
+    /// <summary>
+    /// Cached URI that points to the per-video preview PNG (same name as MP4 but .png)
+    /// </summary>
+    [JsonIgnore]
+    public Uri? VideoPreviewUri { get; private set; }
+
+    /// <summary>
+    /// Exposes whether this source references a video file so templates can react synchronously.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsVideo =>
+        IsVideoExtension(LocalFile?.Extension)
+        || IsVideoExtension(GetExtensionFromPath(RemoteUrl?.AbsolutePath));
+
     [JsonConstructor]
     public ImageSource() { }
 
     public ImageSource(FilePath localFile)
     {
         LocalFile = localFile;
+        RefreshVideoPreview();
     }
 
     public ImageSource(Uri remoteUrl)
@@ -125,12 +142,7 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
         }
 
         // Add MP4 and other video format support
-        if (
-            extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".webm", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".mov", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".avi", StringComparison.OrdinalIgnoreCase)
-        )
+        if (IsVideoExtension(extension))
         {
             TemplateKey = ImageSourceTemplateType.Video;
             return true;
@@ -282,6 +294,29 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
         return guid;
     }
 
+    /// <summary>
+    /// Re-evaluates the per-video preview path and caches the URI if the .png exists.
+    /// </summary>
+    public void RefreshVideoPreview()
+    {
+        if (LocalFile is null || !IsVideoExtension(LocalFile.Extension))
+        {
+            VideoPreviewUri = null;
+            return;
+        }
+
+        if (
+            TryGetSidecarPreview(LocalFile.FullPath, out var previewUri)
+            || TryGetEmbeddedPreviewUri(LocalFile, out previewUri)
+        )
+        {
+            VideoPreviewUri = previewUri;
+            return;
+        }
+
+        VideoPreviewUri = null;
+    }
+
     public string GetHashGuidFileNameCached(string pathPrefix)
     {
         return Path.Combine(pathPrefix, GetHashGuidFileNameCached());
@@ -317,4 +352,96 @@ public record ImageSource : IDisposable, ITemplateKey<ImageSourceTemplateType>
     /// Otherwise returns null.
     /// </summary>
     public static implicit operator string(ImageSource imageSource) => imageSource.ToString();
+
+    private static string GetPreviewPath(string localPath)
+    {
+        return Path.ChangeExtension(localPath, ".png") ?? localPath;
+    }
+
+    private static string? GetExtensionFromPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        return Path.GetExtension(path);
+    }
+
+    private static bool IsVideoExtension(string? extension)
+    {
+        if (extension is null)
+        {
+            return false;
+        }
+
+        return extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webm", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".avi", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetSidecarPreview(string videoPath, out Uri? previewUri)
+    {
+        previewUri = null;
+        if (string.IsNullOrWhiteSpace(videoPath))
+        {
+            return false;
+        }
+
+        var previewPath = GetPreviewPath(videoPath);
+        if (File.Exists(previewPath))
+        {
+            previewUri = new Uri(previewPath);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetEmbeddedPreviewUri(FilePath videoFile, out Uri? previewUri)
+    {
+        previewUri = null;
+
+        if (videoFile is null || string.IsNullOrWhiteSpace(videoFile.FullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var cachePath = GetVideoPreviewCachePath(videoFile.FullPath);
+            if (!File.Exists(cachePath))
+            {
+                var previewBytes = ImageMetadata.ReadEmbeddedVideoPreview(videoFile);
+                if (previewBytes is null || previewBytes.Length == 0)
+                {
+                    return false;
+                }
+
+                File.WriteAllBytes(cachePath, previewBytes);
+            }
+
+            previewUri = new Uri(cachePath);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    private static string GetVideoPreviewCachePath(string videoPath)
+    {
+        var cacheDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "StabilityMatrix",
+            "VideoPreviews"
+        );
+        Directory.CreateDirectory(cacheDirectory);
+
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(videoPath));
+        var fileName = Convert.ToHexString(hashBytes) + ".png";
+        return Path.Combine(cacheDirectory, fileName);
+    }
 }

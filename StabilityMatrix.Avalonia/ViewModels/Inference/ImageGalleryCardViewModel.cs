@@ -91,34 +91,24 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
 
     public void SetPreviewImage(byte[] imageBytes)
     {
-        Dispatcher.UIThread.Post(() =>
+        if (imageBytes == null || imageBytes.Length == 0)
         {
-            try
-            {
-                if (imageBytes == null || imageBytes.Length == 0)
-                {
-                    Logger.Warn("SetPreviewImage: imageBytes is null or empty");
-                    return;
-                }
+            Logger.Warn("SetPreviewImage: imageBytes is null or empty");
+            return;
+        }
 
-                using var stream = new MemoryStream(imageBytes);
-                stream.Seek(0, SeekOrigin.Begin); // Ensure stream is at the beginning
+        try
+        {
+            using var stream = new MemoryStream(imageBytes);
+            stream.Seek(0, SeekOrigin.Begin); // Ensure stream is at the beginning
 
-                var bitmap = new Bitmap(stream);
-
-                var currentImage = PreviewImage;
-
-                PreviewImage = bitmap;
-                IsPreviewOverlayEnabled = true;
-
-                // Dispose old bitmap if it exists
-                currentImage?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Failed to set preview image");
-            }
-        });
+            var bitmap = new Bitmap(stream);
+            ApplyPreviewBitmap(bitmap);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Failed to set preview image");
+        }
     }
 
     private void OnImageSourcesItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -154,6 +144,7 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
             {
                 foreach (var newSource in e.NewItems.OfType<ImageSource>())
                 {
+                    newSource.RefreshVideoPreview();
                     RefreshTemplateKeyAsync(newSource);
                 }
             }
@@ -162,6 +153,7 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
 
     partial void OnSelectedImageChanged(ImageSource? value)
     {
+        UpdatePreviewForSelectedImage(value);
         OnPropertyChanged(nameof(IsVideoPlayerVisible));
         OnPropertyChanged(nameof(IsImageCarouselVisible));
     }
@@ -200,6 +192,44 @@ public partial class ImageGalleryCardViewModel : ViewModelBase
                 }
             });
         });
+    }
+
+    private void UpdatePreviewForSelectedImage(ImageSource? value)
+    {
+        if (value?.VideoPreviewUri?.IsFile ?? false)
+        {
+            try
+            {
+                var bitmap = new Bitmap(value.VideoPreviewUri.LocalPath);
+                ApplyPreviewBitmap(bitmap);
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to load saved preview for {Uri}", value.Uri);
+            }
+        }
+
+        ApplyPreviewBitmap(null);
+    }
+
+    private void ApplyPreviewBitmap(Bitmap? newBitmap)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ApplyPreviewBitmapCore(newBitmap);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => ApplyPreviewBitmapCore(newBitmap));
+    }
+
+    private void ApplyPreviewBitmapCore(Bitmap? newBitmap)
+    {
+        var currentImage = PreviewImage;
+        PreviewImage = newBitmap;
+        IsPreviewOverlayEnabled = newBitmap is not null;
+        currentImage?.Dispose();
     }
 
     [RelayCommand]

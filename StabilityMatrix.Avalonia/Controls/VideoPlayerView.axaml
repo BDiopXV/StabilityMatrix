@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
         <Border
             Grid.Row="0"
-            Margin="8"
+            Margin="{Binding VideoMargin, ElementName=Root}"
             Background="#FF1F1F1F"
             ClipToBounds="True"
             CornerRadius="4">

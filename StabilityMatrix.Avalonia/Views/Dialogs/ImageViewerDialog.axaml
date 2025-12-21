@@ -64,6 +64,7 @@
 
         <!--  Tag is not used but sets TemplateKey which is used to select the DataTemplate later  -->
         <ContentPresenter
+            x:Name="PreviewPresenter"
             Grid.Row="0"
             Content="{Binding}"
             DataContext="{Binding ImageSource}"
@@ -101,6 +102,16 @@
                                 </ui:FAMenuFlyout>
                             </controls:AdvancedImageBox.ContextFlyout>
                         </controls:AdvancedImageBox>
+                    </DataTemplate>
+
+                    <DataTemplate x:Key="{x:Static models:ImageSourceTemplateType.Video}" DataType="models:ImageSource">
+                        <controls:VideoPlayerView
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            AutoPlay="True"
+                            PlaybackRate="1.0"
+                            ShowControls="True"
+                            Source="{Binding}" />
                     </DataTemplate>
 
                     <DataTemplate x:Key="{x:Static models:ImageSourceTemplateType.Default}" DataType="models:ImageSource">
@@ -405,7 +416,9 @@
         </Border>-->
         <ExperimentalAcrylicBorder
             Grid.Row="1"
+            Width="{Binding Width, RelativeSource={RelativeSource AncestorType=controls:UserControlBase}}"
             Padding="4,0,4,0"
+            HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Material="{StaticResource OpaqueDarkAcrylicMaterial}">
             <UniformGrid Margin="4" Columns="3">

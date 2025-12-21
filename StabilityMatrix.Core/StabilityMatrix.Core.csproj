@@ -67,6 +67,7 @@
       <PackageReference Include="Sentry.NLog" />
       <PackageReference Include="SharpCompress" />
       <PackageReference Include="SkiaSharp" />
+      <PackageReference Include="LibVLCSharp" />
       <PackageReference Include="TextMateSharp.Grammars" />
       <PackageReference Include="System.Runtime.Serialization.Formatters" />
       <PackageReference Include="Websocket.Client" />

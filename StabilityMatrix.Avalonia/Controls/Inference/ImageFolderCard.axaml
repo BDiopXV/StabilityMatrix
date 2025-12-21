@@ -23,6 +23,9 @@
     </Design.PreviewWith>
 
     <converters:FileUriConverter x:Key="FileUriConverter" />
+    <converters:IsVideoPathConverter x:Key="IsVideoPathConverter" />
+    <converters:FilePathToImageSourceConverter x:Key="FilePathToImageSourceConverter" />
+    <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
 
     <ControlTheme x:Key="{x:Type controls:ImageFolderCard}" TargetType="controls:ImageFolderCard">
         <Setter Property="Background" Value="Transparent" />
@@ -268,11 +271,21 @@
 
                                             <Border ClipToBounds="True" CornerRadius="8">
                                                 <Grid RowDefinitions="*,Auto">
-                                                    <vendorLabs:BetterAsyncImage
-                                                        Width="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Width}"
-                                                        Height="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Height}"
-                                                        Source="{Binding AbsolutePath, Converter={StaticResource FileUriConverter}}"
-                                                        Stretch="UniformToFill" />
+                                                    <Grid>
+                                                        <controls:VideoThumbnailView
+                                                            Width="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Width}"
+                                                            Height="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Height}"
+                                                            AutoPlay="True"
+                                                            IsVisible="{Binding AbsolutePath, Converter={StaticResource IsVideoPathConverter}}"
+                                                            Source="{Binding AbsolutePath, Converter={StaticResource FilePathToImageSourceConverter}}" />
+
+                                                        <vendorLabs:BetterAsyncImage
+                                                            Width="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Width}"
+                                                            Height="{Binding $parent[ItemsRepeater].((vmInference:ImageFolderCardViewModel)DataContext).ImageSize.Height}"
+                                                            IsVisible="{Binding AbsolutePath, Converter={StaticResource IsVideoPathConverter}, Converter={StaticResource InverseBooleanConverter}}"
+                                                            Source="{Binding AbsolutePath, Converter={StaticResource FileUriConverter}}"
+                                                            Stretch="UniformToFill" />
+                                                    </Grid>
 
                                                     <Border
                                                         Grid.Row="1"

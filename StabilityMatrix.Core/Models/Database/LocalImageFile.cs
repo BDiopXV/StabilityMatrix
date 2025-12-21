@@ -145,6 +145,8 @@ public record LocalImageFile
         if (ImageMetadata.IsVideoExtension(filePath.Extension))
         {
             filePath.Info.Refresh();
+            var videoParameters = ImageMetadata.ParseVideoGenerationParameters(filePath);
+            ImageMetadata.TryWriteVideoPreviewSidecar(filePath);
 
             return new LocalImageFile
             {
@@ -152,8 +154,8 @@ public record LocalImageFile
                 ImageType = imageType,
                 CreatedAt = filePath.Info.CreationTimeUtc,
                 LastModifiedAt = filePath.Info.LastWriteTimeUtc,
-                GenerationParameters = ImageMetadata.ParseVideoGenerationParameters(filePath),
-                ImageSize = new Size(0, 0),
+                GenerationParameters = videoParameters,
+                ImageSize = new Size(videoParameters?.Width ?? 0, videoParameters?.Height ?? 0),
             };
         }
 

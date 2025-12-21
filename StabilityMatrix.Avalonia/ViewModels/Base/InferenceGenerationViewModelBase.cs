@@ -565,6 +565,8 @@ public abstract partial class InferenceGenerationViewModelBase
                     fileExtension: fileExtension
                 );
 
+                ImageMetadata.TryWriteVideoPreviewSidecar(filePath);
+
                 // ImageSource will auto-detect video format
                 var source = new ImageSource(filePath) { Label = imageLabel };
                 outputImages.Add(source);

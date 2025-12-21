@@ -6,8 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using ExifLibrary;
 using KGySoft.CoreLibraries;
+using LibVLCSharp.Shared;
 using MetadataExtractor;
 using MetadataExtractor.Formats.Exif;
 using MetadataExtractor.Formats.Png;
@@ -19,6 +21,7 @@ using StabilityMatrix.Core.Models;
 using StabilityMatrix.Core.Models.FileInterfaces;
 using Directory = MetadataExtractor.Directory;
 using DrawingSize = System.Drawing.Size;
+using VlcCore = global::LibVLCSharp.Shared.Core;
 
 namespace StabilityMatrix.Core.Helper;
 
@@ -27,6 +30,9 @@ public class ImageMetadata
     private IReadOnlyList<Directory>? Directories { get; set; }
 
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    private static readonly object LibVlcInitLock = new();
+    private static bool libVlcInitialized;
+    private static readonly TimeSpan VideoSnapshotTimeout = TimeSpan.FromSeconds(3);
     private static readonly byte[] PngHeader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     private static readonly byte[] Idat = "IDAT"u8.ToArray();
     private static readonly byte[] Text = "tEXt"u8.ToArray();
@@ -246,6 +252,156 @@ public class ImageMetadata
         }
 
         return null;
+    }
+
+    public static byte[]? ReadEmbeddedVideoPreview(FilePath filePath)
+    {
+        if (!filePath.Extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (!EnsureLibVlcInitialized())
+        {
+            return null;
+        }
+
+        var snapshotPath = Path.Combine(
+            Path.GetTempPath(),
+            $"StabilityMatrixVideoPreview-{Guid.NewGuid():N}.png"
+        );
+
+        try
+        {
+            using var libVlc = new LibVLC(
+                "--quiet",
+                "--no-osd",
+                "--no-video-title-show",
+                "--no-audio",
+                "--avcodec-hw=none",
+                "--vout=dummy"
+            );
+            using var media = new Media(
+                libVlc,
+                filePath.FullPath,
+                FromType.FromPath,
+                ":no-video-title-show",
+                ":no-audio",
+                ":avcodec-hw=none",
+                ":vout=dummy"
+            );
+            using var mediaPlayer = new MediaPlayer(media) { EnableHardwareDecoding = false };
+
+            mediaPlayer.Play();
+            Thread.Sleep(250);
+
+            if (!mediaPlayer.TakeSnapshot(0, snapshotPath, 0, 0))
+            {
+                mediaPlayer.Stop();
+                return null;
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.Elapsed < VideoSnapshotTimeout)
+            {
+                if (File.Exists(snapshotPath) && new FileInfo(snapshotPath).Length > 0)
+                {
+                    break;
+                }
+
+                Thread.Sleep(50);
+            }
+
+            mediaPlayer.Stop();
+
+            if (!File.Exists(snapshotPath) || new FileInfo(snapshotPath).Length == 0)
+            {
+                return null;
+            }
+
+            return File.ReadAllBytes(snapshotPath);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(ex, "Failed to capture video preview for '{Path}'", filePath.FullPath);
+            return null;
+        }
+        finally
+        {
+            TryDeleteTempFile(snapshotPath);
+        }
+    }
+
+    public static void TryWriteVideoPreviewSidecar(FilePath videoFile)
+    {
+        try
+        {
+            var previewBytes = ReadEmbeddedVideoPreview(videoFile);
+            if (previewBytes is null || previewBytes.Length == 0)
+            {
+                return;
+            }
+
+            var previewPath = Path.ChangeExtension(videoFile.FullPath, ".png");
+            if (previewPath is null)
+            {
+                return;
+            }
+
+            File.WriteAllBytes(previewPath, previewBytes);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(ex, "Failed to extract embedded preview for '{Path}'", videoFile.FullPath);
+        }
+    }
+
+    private static bool EnsureLibVlcInitialized()
+    {
+        if (libVlcInitialized)
+        {
+            return true;
+        }
+
+        lock (LibVlcInitLock)
+        {
+            if (libVlcInitialized)
+            {
+                return true;
+            }
+
+            try
+            {
+                VlcCore.Initialize();
+                libVlcInitialized = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to initialize LibVLC for video previews");
+                return false;
+            }
+        }
+    }
+
+    private static void TryDeleteTempFile(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch (Exception)
+        {
+            // best effort cleanup, swallow failures
+        }
     }
 
     private static byte[]? ReadMp4Comment(FilePath filePath)

@@ -1,10 +1,13 @@
 ﻿<Styles
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:app="using:StabilityMatrix.Avalonia"
     xmlns:controls="using:StabilityMatrix.Avalonia.Controls"
+    xmlns:converters="clr-namespace:StabilityMatrix.Avalonia.Converters"
     xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
     xmlns:mocks="clr-namespace:StabilityMatrix.Avalonia.DesignData"
     xmlns:models="clr-namespace:StabilityMatrix.Avalonia.Models"
+    xmlns:ui="using:FluentAvalonia.UI.Controls"
     xmlns:vendorLabs="clr-namespace:StabilityMatrix.Avalonia.Controls.VendorLabs"
     xmlns:vmInference="clr-namespace:StabilityMatrix.Avalonia.ViewModels.Inference"
     x:DataType="vmInference:ImageGalleryCardViewModel">
@@ -20,6 +23,7 @@
             <DataTemplate x:Key="VideoPlayerTemplate" DataType="{x:Type models:ImageSource}">
                 <controls:VideoPlayerView Source="{Binding}" />
             </DataTemplate>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         </Style.Resources>
         <!--  Set Defaults  -->
         <Setter Property="Template">
@@ -134,11 +138,26 @@
                             </ListBox.Styles>
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:ImageSource}">
-                                    <vendorLabs:BetterAsyncImage
-                                        MaxHeight="65"
-                                        CornerRadius="4"
-                                        Source="{Binding Uri}"
-                                        Stretch="Uniform" />
+                                    <Grid
+                                        MinWidth="65"
+                                        MinHeight="65"
+                                        MaxHeight="65">
+                                        <vendorLabs:BetterAsyncImage
+                                            MaxWidth="65"
+                                            MaxHeight="65"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            CornerRadius="4"
+                                            IsVisible="{Binding IsVideo, Converter={StaticResource InverseBooleanConverter}}"
+                                            Source="{Binding Uri}"
+                                            Stretch="Uniform" />
+                                        <controls:VideoThumbnailView
+                                            Width="65"
+                                            Height="65"
+                                            AutoPlay="True"
+                                            IsVisible="{Binding IsVideo}"
+                                            Source="{Binding}" />
+                                    </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

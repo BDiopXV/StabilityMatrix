@@ -22,7 +22,6 @@ using StabilityMatrix.Core.Models.Database;
 using StabilityMatrix.Core.Models.FileInterfaces;
 using StabilityMatrix.Core.Services;
 using Path = System.IO.Path;
-using Size = StabilityMatrix.Core.Helper.Size;
 
 namespace StabilityMatrix.Avalonia.ViewModels.Dialogs;
 
@@ -83,7 +82,7 @@ public partial class ImageViewerViewModel(
         if (value?.LocalFile is { Exists: true } localFile)
         {
             FileNameText = localFile.Name;
-            FileSizeText = Size.FormatBase10Bytes(localFile.GetSize(true));
+            FileSizeText = StabilityMatrix.Core.Helper.Size.FormatBase10Bytes(localFile.GetSize(true));
         }
     }
 
@@ -173,6 +172,15 @@ public partial class ImageViewerViewModel(
             Math.Floor((mainWindowSize?.Height ?? 1000) - margins.Vertical())
         );
 
+        var desiredSize = CalculateDialogSize(dialogSize.Width, dialogSize.Height);
+
+        var dialogContent = new ImageViewerDialog
+        {
+            Width = desiredSize.Width,
+            Height = desiredSize.Height,
+            DataContext = this,
+        };
+
         var dialog = new BetterContentDialog
         {
             MaxDialogWidth = dialogSize.Width,
@@ -182,14 +190,37 @@ public partial class ImageViewerViewModel(
             IsFooterVisible = false,
             CloseOnClickOutside = true,
             ContentVerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = new ImageViewerDialog
-            {
-                Width = dialogSize.Width,
-                Height = dialogSize.Height,
-                DataContext = this,
-            },
+            Content = dialogContent,
         };
 
         return dialog;
+    }
+
+    private global::Avalonia.Size CalculateDialogSize(double baseWidth, double baseHeight)
+    {
+        const double MinDimension = 320;
+
+        if (LocalImageFile?.ImageSize is { Width: > 0, Height: > 0 } imageSize)
+        {
+            var sourceSize = new global::Avalonia.Size(imageSize.Width, imageSize.Height);
+            if (sourceSize.Width > 0 && sourceSize.Height > 0)
+            {
+                var widthScale = baseWidth / sourceSize.Width;
+                var heightScale = baseHeight / sourceSize.Height;
+                var scale = Math.Min(1d, Math.Min(widthScale, heightScale));
+
+                if (scale > 0)
+                {
+                    var width = Math.Max(MinDimension, sourceSize.Width * scale);
+                    var height = Math.Max(MinDimension, sourceSize.Height * scale);
+                    return new global::Avalonia.Size(
+                        Math.Min(width, baseWidth),
+                        Math.Min(height, baseHeight)
+                    );
+                }
+            }
+        }
+
+        return new global::Avalonia.Size(baseWidth, baseHeight);
     }
 }
