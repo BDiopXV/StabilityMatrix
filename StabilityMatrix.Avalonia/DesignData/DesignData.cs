@@ -142,6 +142,7 @@ public static class DesignData
             .AddSingleton(Substitute.For<ITrackedDownloadService>())
             .AddSingleton(Substitute.For<ILiteDbContext>())
             .AddSingleton(Substitute.For<IAccountsService>())
+            .AddSingleton(Substitute.For<ILmStudioService>())
             .AddSingleton<IInferenceClientManager, MockInferenceClientManager>()
             .AddSingleton<ICompletionProvider, MockCompletionProvider>()
             .AddSingleton<IModelIndexService, MockModelIndexService>()
@@ -696,6 +697,9 @@ public static class DesignData
 
     public static AccountSettingsViewModel AccountSettingsViewModel =>
         Services.GetRequiredService<AccountSettingsViewModel>();
+
+    public static LmStudioSettingsViewModel LmStudioSettingsViewModel =>
+        Services.GetRequiredService<LmStudioSettingsViewModel>();
 
     public static NotificationSettingsViewModel NotificationSettingsViewModel =>
         Services.GetRequiredService<NotificationSettingsViewModel>();

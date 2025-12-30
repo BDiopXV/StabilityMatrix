@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using DynamicData.Binding;
 using Injectio.Attributes;
 using StabilityMatrix.Avalonia.Extensions;
 using StabilityMatrix.Avalonia.Models;
@@ -88,6 +90,14 @@ public class InferenceZITTextToImageViewModel : InferenceGenerationViewModelBase
             promptCard.IsNegativePromptEnabled = false;
         });
 
+        // Bind GenerateImageCommand.IsRunning to PromptCardViewModel.IsGenerationRunning
+        AddDisposable(
+            GenerateImageCommand
+                .WhenPropertyChanged(x => x.IsRunning)
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(e => PromptCardViewModel.IsGenerationRunning = e.Value)
+        );
+
         BatchSizeCardViewModel = vmFactory.Get<BatchSizeCardViewModel>();
 
         ModulesCardViewModel = vmFactory.Get<StackEditableCardViewModel>(modulesCard =>
@@ -160,6 +170,13 @@ public class InferenceZITTextToImageViewModel : InferenceGenerationViewModelBase
         CancellationToken cancellationToken
     )
     {
+        // Unload LM Studio models to free VRAM before generation
+        await UnloadLmStudioModelsAsync(cancellationToken);
+
+        // Auto-enhance prompt if enabled
+        if (!await PromptCardViewModel.AutoEnhanceIfEnabledAsync())
+            return;
+
         // Validate the prompts
         if (!await PromptCardViewModel.ValidatePrompts())
             return;

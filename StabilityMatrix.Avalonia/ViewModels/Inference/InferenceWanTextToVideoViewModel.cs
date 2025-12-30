@@ -1,10 +1,14 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Reactive.Linq;
+using System.Text.Json.Serialization;
+using System.Threading;
+using DynamicData.Binding;
 using Injectio.Attributes;
 using StabilityMatrix.Avalonia.Extensions;
 using StabilityMatrix.Avalonia.Models;
 using StabilityMatrix.Avalonia.Models.Inference;
 using StabilityMatrix.Avalonia.Services;
 using StabilityMatrix.Avalonia.ViewModels.Base;
+using StabilityMatrix.Avalonia.ViewModels.Inference.Modules;
 using StabilityMatrix.Avalonia.ViewModels.Inference.Video;
 using StabilityMatrix.Avalonia.Views.Inference;
 using StabilityMatrix.Core.Attributes;
@@ -68,10 +72,22 @@ public class InferenceWanTextToVideoViewModel : InferenceGenerationViewModelBase
 
         PromptCardViewModel = AddDisposable(vmFactory.Get<PromptCardViewModel>());
 
+        // Set up trigger words provider to get LoRA trigger words from ModelCardViewModel
+        PromptCardViewModel.LoraTriggerWordsProvider = () =>
+            GetLoraTriggerWords(ModelCardViewModel.ExtraNetworksStackCardViewModel);
+
+        // Bind GenerateImageCommand.IsRunning to PromptCardViewModel.IsGenerationRunning
+        AddDisposable(
+            GenerateImageCommand
+                .WhenPropertyChanged(x => x.IsRunning)
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(e => PromptCardViewModel.IsGenerationRunning = e.Value)
+        );
+
         BatchSizeCardViewModel = vmFactory.Get<BatchSizeCardViewModel>();
 
-        VideoOutputSettingsCardViewModel = vmFactory.Get<VideoOutputSettingsCardViewModel>(
-            vm => vm.Fps = 16.0d
+        VideoOutputSettingsCardViewModel = vmFactory.Get<VideoOutputSettingsCardViewModel>(vm =>
+            vm.Fps = 16.0d
         );
 
         StackCardViewModel = vmFactory.Get<StackCardViewModel>();
@@ -94,7 +110,7 @@ public class InferenceWanTextToVideoViewModel : InferenceGenerationViewModelBase
         builder.Connections.Seed = args.SeedOverride switch
         {
             { } seed => Convert.ToUInt64(seed),
-            _ => Convert.ToUInt64(SeedCardViewModel.Seed)
+            _ => Convert.ToUInt64(SeedCardViewModel.Seed),
         };
 
         // Load models
@@ -125,10 +141,17 @@ public class InferenceWanTextToVideoViewModel : InferenceGenerationViewModelBase
         CancellationToken cancellationToken
     )
     {
+        // Unload LM Studio models to free VRAM before generation
+        await UnloadLmStudioModelsAsync(cancellationToken);
+
         if (!await CheckClientConnectedWithPrompt() || !ClientManager.IsConnected)
         {
             return;
         }
+
+        // Auto-enhance prompt if enabled
+        if (!await PromptCardViewModel.AutoEnhanceIfEnabledAsync())
+            return;
 
         if (!await ModelCardViewModel.ValidateModel())
             return;
@@ -165,13 +188,13 @@ public class InferenceWanTextToVideoViewModel : InferenceGenerationViewModelBase
                 OutputNodeNames = buildPromptArgs.Builder.Connections.OutputNodeNames.ToArray(),
                 Parameters = SaveStateToParameters(new GenerationParameters()) with
                 {
-                    Seed = Convert.ToUInt64(seed)
+                    Seed = Convert.ToUInt64(seed),
                 },
                 Project = inferenceProject,
                 FilesToTransfer = buildPromptArgs.FilesToTransfer,
                 BatchIndex = i,
                 // Only clear output images on the first batch
-                ClearOutputImages = i == 0
+                ClearOutputImages = i == 0,
             };
 
             batchArgs.Add(generationArgs);
@@ -205,5 +228,24 @@ public class InferenceWanTextToVideoViewModel : InferenceGenerationViewModelBase
         parameters.Seed = (ulong)SeedCardViewModel.Seed;
 
         return parameters;
+    }
+
+    private static IEnumerable<string> GetLoraTriggerWords(StackEditableCardViewModel stack)
+    {
+        foreach (var module in stack.Cards.OfType<LoraModule>())
+        {
+            if (!module.IsEnabled)
+                continue;
+
+            var card = module.GetCard<ExtraNetworkCardViewModel>();
+            if (card?.SelectedModel?.Local?.ConnectedModelInfo?.TrainedWords is { } trainedWords)
+            {
+                foreach (var word in trainedWords)
+                {
+                    if (!string.IsNullOrWhiteSpace(word))
+                        yield return word;
+                }
+            }
+        }
     }
 }

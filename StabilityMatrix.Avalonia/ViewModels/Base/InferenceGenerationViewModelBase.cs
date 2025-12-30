@@ -16,6 +16,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using ExifLibrary;
 using FluentAvalonia.UI.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using Refit;
 using Semver;
@@ -677,6 +678,28 @@ public abstract partial class InferenceGenerationViewModelBase
         await vm.CreateDialog().ShowAsync();
 
         return ClientManager.IsConnected;
+    }
+
+    /// <summary>
+    /// Unloads LM Studio models to free VRAM before generation.
+    /// Only runs if LM Studio integration is enabled.
+    /// </summary>
+    protected async Task UnloadLmStudioModelsAsync(CancellationToken cancellationToken = default)
+    {
+        if (settingsManager.Settings.LmStudioSettings?.IsEnabled != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var lmStudioService = App.Services.GetRequiredService<ILmStudioService>();
+            await lmStudioService.UnloadModelsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(ex, "Failed to unload LM Studio models");
+        }
     }
 
     /// <summary>

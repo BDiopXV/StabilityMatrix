@@ -37,10 +37,11 @@ public partial class SettingsViewModel : PageViewModelBase
         {
             vmFactory.Get<MainSettingsViewModel>(),
             vmFactory.Get<InferenceSettingsViewModel>(),
+            vmFactory.Get<LmStudioSettingsViewModel>(),
             vmFactory.Get<AccountSettingsViewModel>(),
             vmFactory.Get<UpdateSettingsViewModel>(),
             vmFactory.Get<NotificationSettingsViewModel>(),
-            vmFactory.Get<AnalyticsSettingsViewModel>()
+            vmFactory.Get<AnalyticsSettingsViewModel>(),
         };
 
         CurrentPagePath.AddRange(SubPages);

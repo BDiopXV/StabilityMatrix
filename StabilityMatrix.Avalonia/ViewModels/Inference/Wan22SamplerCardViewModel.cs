@@ -52,15 +52,28 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
         e.Builder.Connections.PrimaryCfg = CfgScale;
 
         // Image embeds
-        var imageEmbeds = e.Builder.Nodes.AddTypedNode(
-            new ComfyNodeBuilder.WanVideoImageToVideoEncode
+        // var imageEmbeds = e.Builder.Nodes.AddTypedNode(
+        //     new ComfyNodeBuilder.WanVideoImageToVideoEncode
+        //     {
+        //         Name = e.Builder.Nodes.GetUniqueName("WanVideoImageToVideoEncode"),
+        //         Vae = vae,
+        //         StartImage = (ImageNodeConnection)startImage,
+        //         Width = Width,
+        //         Height = Height,
+        //         NumFrames = Length,
+        //     }
+        // );
+
+        var controlEmbeds = e.Builder.Nodes.AddTypedNode(
+            new ComfyNodeBuilder.PainterI2VforKJ
             {
-                Name = e.Builder.Nodes.GetUniqueName("WanVideoImageToVideoEncode"),
+                Name = e.Builder.Nodes.GetUniqueName("PainterI2VforKJ"),
                 Vae = vae,
                 StartImage = (ImageNodeConnection)startImage,
                 Width = Width,
                 Height = Height,
                 NumFrames = Length,
+                MotionAmplitude = 1.05,
             }
         );
 
@@ -73,8 +86,9 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
             {
                 Name = e.Builder.Nodes.GetUniqueName("WanVideoSampler_High"),
                 Model = highModel,
-                ImageEmbeds = imageEmbeds.Output,
+                ImageEmbeds = controlEmbeds.Output,
                 TextEmbeds = PromptVm.textEmbeds.Output,
+                ControlAfterGenerate = "increment",
                 Steps = Steps,
                 Cfg = (double)e.Builder.Connections.PrimaryCfg,
                 StartStep = 0,
@@ -83,6 +97,7 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
                 Seed = e.Builder.Connections.Seed,
                 Scheduler = selectedKJSampler.Name,
                 ForceOffload = true,
+                AddNoiseToSamples = true,
             }
         );
 
@@ -92,8 +107,9 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
             {
                 Name = e.Builder.Nodes.GetUniqueName("WanVideoSampler_Low"),
                 Model = lowModel,
-                ImageEmbeds = imageEmbeds.Output,
+                ImageEmbeds = controlEmbeds.Output,
                 TextEmbeds = PromptVm.textEmbeds.Output,
+                ControlAfterGenerate = "randomize",
                 Samples = samplerHigh.Output1,
                 // DenoisedSamples = samplerHigh.Output2,
                 Steps = Steps,
@@ -105,6 +121,7 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
                 Seed = e.Builder.Connections.Seed + 158,
                 Scheduler = selectedKJSampler.Name,
                 ForceOffload = true,
+                AddNoiseToSamples = false,
             }
         );
 
@@ -142,6 +159,7 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
                 Image = upscaled.Output,
                 Width = 720,
                 Height = 10000,
+                UpscaleMethod = "lanczos",
             }
         );
 
@@ -152,8 +170,8 @@ public class Wan22SamplerCardViewModel : SamplerCardViewModel
                 Name = e.Builder.Nodes.GetUniqueName("RIFE"),
                 Frames = resized.Output,
                 ClearCacheAfterNFrames = 16,
-                CkptName = "rife49.pth",
-                Multiplier = 4,
+                CkptName = "rife47.pth",
+                Multiplier = 2,
                 FastMode = false,
                 Ensemble = true,
                 ScaleFactor = 1,

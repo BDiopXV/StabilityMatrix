@@ -221,6 +221,7 @@ public class ComfyNodeBuilder
         public LatentNodeConnection? Samples { get; init; } // optional chained latent
         public LatentNodeConnection? DenoisedSamples { get; init; } // optional chained latent
         public FetaArgsNodeConnection? FetaArgs { get; init; } // optional enhancement args
+        public string ControlAfterGenerate { get; init; } = "randomize";
         public int Steps { get; init; }
         public double Cfg { get; init; }
         public double Shift { get; init; } // ADD THIS
@@ -230,6 +231,7 @@ public class ComfyNodeBuilder
         public string Scheduler { get; init; } = "euler";
         public int RiflexFreqIndex { get; init; } // ADD THIS
         public bool ForceOffload { get; init; } = true;
+        public bool AddNoiseToSamples { get; init; } = false;
     }
 
     public record WanVideoSetLoRAs : ComfyTypedNodeBase<ModelNodeConnection>
@@ -310,6 +312,22 @@ public class ComfyNodeBuilder
     {
         public required VAENodeConnection Vae { get; init; }
         public required ImageNodeConnection StartImage { get; init; }
+        public int Width { get; init; }
+        public int Height { get; init; }
+        public int NumFrames { get; init; }
+        public double NoiseAugStrength { get; init; } = 0.03;
+        public double StartLatentStrength { get; init; } = 1.0;
+        public double EndLatentStrength { get; init; } = 1.0;
+        public bool ForceOffload { get; init; } = true;
+        public bool FunOrFl2vModel { get; init; } = false;
+        public bool TiledVae { get; init; } = false;
+    }
+
+    public record PainterI2VforKJ : ComfyTypedNodeBase<ImageEmbedsNodeConnection>
+    {
+        public required VAENodeConnection Vae { get; init; }
+        public required ImageNodeConnection StartImage { get; init; }
+        public double MotionAmplitude { get; init; } = 1.15;
         public int Width { get; init; }
         public int Height { get; init; }
         public int NumFrames { get; init; }

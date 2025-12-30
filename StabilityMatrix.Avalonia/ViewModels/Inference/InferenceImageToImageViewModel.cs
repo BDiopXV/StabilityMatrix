@@ -49,6 +49,9 @@ public class InferenceImageToImageViewModel : InferenceTextToImageViewModel
         });
 
         SamplerCardViewModel.IsDenoiseStrengthEnabled = true;
+
+        // Set up the image provider for LM Studio enhancement
+        PromptCardViewModel.InputImageProvider = SelectImageCardViewModel;
     }
 
     /// <inheritdoc />
@@ -60,7 +63,7 @@ public class InferenceImageToImageViewModel : InferenceTextToImageViewModel
         builder.Connections.Seed = args.SeedOverride switch
         {
             { } seed => Convert.ToUInt64(seed),
-            _ => Convert.ToUInt64(SeedCardViewModel.Seed)
+            _ => Convert.ToUInt64(SeedCardViewModel.Seed),
         };
 
         var applyArgs = args.ToModuleApplyStepEventArgs();

@@ -86,6 +86,11 @@ public class Settings
     public ModelSearchOptions? ModelSearchOptions { get; set; }
 
     /// <summary>
+    /// Settings for LM Studio integration for prompt enhancement and image analysis
+    /// </summary>
+    public LmStudioSettings? LmStudioSettings { get; set; }
+
+    /// <summary>
     /// Whether prompt auto completion is enabled
     /// </summary>
     public bool IsPromptCompletionEnabled { get; set; } = true;

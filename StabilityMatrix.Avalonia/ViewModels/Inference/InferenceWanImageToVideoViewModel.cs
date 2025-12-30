@@ -31,6 +31,9 @@ public class InferenceWanImageToVideoViewModel : InferenceWanTextToVideoViewMode
         SamplerCardViewModel.Height = 512;
 
         ModelCardViewModel.IsClipVisionEnabled = true;
+
+        // Set up the image provider for LM Studio enhancement
+        PromptCardViewModel.InputImageProvider = SelectImageCardViewModel;
     }
 
     [JsonPropertyName("ImageLoader")]
@@ -44,7 +47,7 @@ public class InferenceWanImageToVideoViewModel : InferenceWanTextToVideoViewMode
         builder.Connections.Seed = args.SeedOverride switch
         {
             { } seed => Convert.ToUInt64(seed),
-            _ => Convert.ToUInt64(SeedCardViewModel.Seed)
+            _ => Convert.ToUInt64(SeedCardViewModel.Seed),
         };
 
         // Load models
@@ -57,7 +60,7 @@ public class InferenceWanImageToVideoViewModel : InferenceWanTextToVideoViewMode
                 Name = builder.Nodes.GetUniqueName("ControlNet_LoadImage"),
                 Image =
                     SelectImageCardViewModel.ImageSource?.GetHashGuidFileNameCached("Inference")
-                    ?? throw new ValidationException()
+                    ?? throw new ValidationException(),
             }
         );
         builder.Connections.Primary = imageLoad.Output1;

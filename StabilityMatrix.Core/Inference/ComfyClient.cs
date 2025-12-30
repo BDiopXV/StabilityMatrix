@@ -94,6 +94,11 @@ public class ComfyClient : InferenceClientBase
     /// </summary>
     public event EventHandler<ComfyWebSocketImageData>? PreviewImageReceived;
 
+    /// <summary>
+    /// Event raised when system stats are received from the server
+    /// </summary>
+    public event EventHandler<ComfySystemStats>? SystemStatsReceived;
+
     public ComfyClient(IApiFactory apiFactory, Uri baseAddress)
     {
         comfyApi = apiFactory.CreateRefitClient<IComfyApi>(
@@ -154,15 +159,23 @@ public class ComfyClient : InferenceClientBase
         {
             json = JsonSerializer.Deserialize<ComfyWebSocketResponse>(text, jsonSerializerOptions);
         }
-        catch (JsonException e)
+        catch (JsonException)
         {
-            Logger.Warn($"Failed to parse json {text} ({e}), skipping");
+            // Try parsing as raw system stats (some extensions send stats without wrapper)
+            if (TryParseAsSystemStats(text))
+                return;
+
+            Logger.Trace($"Failed to parse json, skipping");
             return;
         }
 
         if (json is null)
         {
-            Logger.Warn($"Could not parse json {text}, skipping");
+            // Try parsing as raw system stats
+            if (TryParseAsSystemStats(text))
+                return;
+
+            Logger.Trace($"Could not parse json, skipping");
             return;
         }
 
@@ -253,10 +266,69 @@ public class ComfyClient : InferenceClientBase
                 Logger.Warn($"Could not find task for prompt {errorData.PromptId}, skipping");
             }
         }
+        else if (json.Type == ComfyWebSocketResponseType.SystemStats)
+        {
+            var systemStats = json.GetDataAsType<ComfySystemStats>(jsonSerializerOptions);
+            if (systemStats is null)
+            {
+                Logger.Warn($"Could not parse system stats data {json.Data}, skipping");
+                return;
+            }
+
+            SystemStatsReceived?.Invoke(this, systemStats);
+        }
+        else if (json.Type == ComfyWebSocketResponseType.Unknown)
+        {
+            // Try to parse Unknown type as system stats (some ComfyUI extensions send stats without a type field)
+            try
+            {
+                // Check if data contains system stats fields
+                if (json.Data.ContainsKey("cpu_utilization") || json.Data.ContainsKey("gpus"))
+                {
+                    var systemStats = json.GetDataAsType<ComfySystemStats>(jsonSerializerOptions);
+                    if (systemStats != null)
+                    {
+                        SystemStatsReceived?.Invoke(this, systemStats);
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Trace(ex, "Failed to parse unknown message as system stats");
+            }
+
+            Logger.Trace($"Unknown message type {json.Type} ({json.Data}), skipping");
+        }
         else
         {
-            Logger.Warn($"Unknown message type {json.Type} ({json.Data}), skipping");
+            Logger.Trace($"Unhandled message type {json.Type} ({json.Data}), skipping");
         }
+    }
+
+    /// <summary>
+    /// Tries to parse raw JSON text as system stats (for extensions that send stats without type wrapper)
+    /// </summary>
+    private bool TryParseAsSystemStats(string text)
+    {
+        try
+        {
+            // Check if this looks like system stats by looking for key fields
+            if (!text.Contains("cpu_utilization") && !text.Contains("gpus"))
+                return false;
+
+            var systemStats = JsonSerializer.Deserialize<ComfySystemStats>(text, jsonSerializerOptions);
+            if (systemStats != null && (systemStats.Gpus != null || systemStats.CpuUtilization > 0))
+            {
+                SystemStatsReceived?.Invoke(this, systemStats);
+                return true;
+            }
+        }
+        catch
+        {
+            // Not valid system stats
+        }
+        return false;
     }
 
     /// <summary>

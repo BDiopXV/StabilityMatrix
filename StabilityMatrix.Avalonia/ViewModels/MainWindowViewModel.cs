@@ -71,6 +71,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ProgressManagerViewModel ProgressManagerViewModel { get; init; }
     public UpdateViewModel UpdateViewModel { get; init; }
+    public ComfyResourceMonitorViewModel ComfyResourceMonitorViewModel { get; init; }
 
     public double PaneWidth =>
         (Compat.IsWindows ? 0 : 20)
@@ -101,7 +102,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IUpdateHelper updateHelper,
         ISecretsManager secretsManager,
         INavigationService<MainWindowViewModel> navigationService,
-        INavigationService<SettingsViewModel> settingsNavService
+        INavigationService<SettingsViewModel> settingsNavService,
+        ComfyResourceMonitorViewModel comfyResourceMonitorViewModel
     )
     {
         this.settingsManager = settingsManager;
@@ -118,6 +120,7 @@ public partial class MainWindowViewModel : ViewModelBase
         this.settingsNavService = settingsNavService;
         ProgressManagerViewModel = dialogFactory.Get<ProgressManagerViewModel>();
         UpdateViewModel = dialogFactory.Get<UpdateViewModel>();
+        ComfyResourceMonitorViewModel = comfyResourceMonitorViewModel;
     }
 
     public override void OnLoaded()

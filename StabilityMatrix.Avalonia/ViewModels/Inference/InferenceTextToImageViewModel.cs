@@ -94,6 +94,18 @@ public class InferenceTextToImageViewModel : InferenceGenerationViewModelBase, I
 
         PromptCardViewModel = AddDisposable(vmFactory.Get<PromptCardViewModel>());
 
+        // Set up trigger words provider to get LoRA trigger words from ModelCardViewModel
+        PromptCardViewModel.LoraTriggerWordsProvider = () =>
+            GetLoraTriggerWords(ModelCardViewModel.ExtraNetworksStackCardViewModel);
+
+        // Bind GenerateImageCommand.IsRunning to PromptCardViewModel.IsGenerationRunning
+        AddDisposable(
+            GenerateImageCommand
+                .WhenPropertyChanged(x => x.IsRunning)
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(e => PromptCardViewModel.IsGenerationRunning = e.Value)
+        );
+
         BatchSizeCardViewModel = vmFactory.Get<BatchSizeCardViewModel>();
 
         ModulesCardViewModel = vmFactory.Get<StackEditableCardViewModel>(modulesCard =>
@@ -264,6 +276,13 @@ public class InferenceTextToImageViewModel : InferenceGenerationViewModelBase, I
         CancellationToken cancellationToken
     )
     {
+        // Unload LM Studio models to free VRAM before generation
+        await UnloadLmStudioModelsAsync(cancellationToken);
+
+        // Auto-enhance prompt if enabled
+        if (!await PromptCardViewModel.AutoEnhanceIfEnabledAsync())
+            return;
+
         // Validate the prompts
         if (!await PromptCardViewModel.ValidatePrompts())
             return;
@@ -414,5 +433,27 @@ public class InferenceTextToImageViewModel : InferenceGenerationViewModelBase, I
         }
 
         base.LoadStateFromJsonObject(state);
+    }
+
+    /// <summary>
+    /// Gets trigger words from all enabled LoRAs in the specified stack.
+    /// </summary>
+    private static IEnumerable<string> GetLoraTriggerWords(StackEditableCardViewModel stack)
+    {
+        foreach (var module in stack.Cards.OfType<LoraModule>())
+        {
+            if (!module.IsEnabled)
+                continue;
+
+            var card = module.GetCard<ExtraNetworkCardViewModel>();
+            if (card?.SelectedModel?.Local?.ConnectedModelInfo?.TrainedWords is { } trainedWords)
+            {
+                foreach (var word in trainedWords)
+                {
+                    if (!string.IsNullOrWhiteSpace(word))
+                        yield return word;
+                }
+            }
+        }
     }
 }

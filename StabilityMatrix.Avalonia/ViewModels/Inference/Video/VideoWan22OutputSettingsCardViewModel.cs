@@ -86,7 +86,7 @@ public partial class VideoWan22OutputSettingsCardViewModel
         //     new ComfyNodeBuilder.SaveAnimatedWEBP
         //     {
         //         Name = e.Nodes.GetUniqueName("SaveAnimatedWEBP"),
-        //         Images = image,
+        //         Images = (ImageNodeConnection)e.Builder.Connections.Primary,
         //         FilenamePrefix = "InferenceVideo",
         //         Fps = (double)((int)(Fps * 1.5)),
         //         Lossless = Lossless,

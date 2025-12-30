@@ -97,7 +97,7 @@
             </ui:NavigationView.MenuItemTemplate>
 
             <ui:NavigationView.PaneFooter>
-                <StackPanel>
+                <StackPanel HorizontalAlignment="Stretch">
                     <!--  Update button  -->
                     <ui:NavigationViewItem
                         Name="FooterUpdateItem"

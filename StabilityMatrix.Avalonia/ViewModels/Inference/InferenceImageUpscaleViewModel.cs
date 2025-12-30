@@ -134,7 +134,7 @@ public class InferenceImageUpscaleViewModel : InferenceGenerationViewModelBase
                         Image = builder.GetPrimaryAsImage(),
                         SharpenRadius = SharpenCardViewModel.SharpenRadius,
                         Sigma = SharpenCardViewModel.Sigma,
-                        Alpha = SharpenCardViewModel.Alpha
+                        Alpha = SharpenCardViewModel.Alpha,
                     }
                 )
                 .Output;
@@ -149,6 +149,9 @@ public class InferenceImageUpscaleViewModel : InferenceGenerationViewModelBase
         CancellationToken cancellationToken
     )
     {
+        // Unload LM Studio models to free VRAM before generation
+        await UnloadLmStudioModelsAsync(cancellationToken);
+
         if (!ClientManager.IsConnected)
         {
             notificationService.Show("Client not connected", "Please connect first");
@@ -178,7 +181,7 @@ public class InferenceImageUpscaleViewModel : InferenceGenerationViewModelBase
             {
                 ModelName = UpscalerCardViewModel.SelectedUpscaler?.Name,
             },
-            Project = InferenceProjectDocument.FromLoadable(this)
+            Project = InferenceProjectDocument.FromLoadable(this),
         };
 
         await RunGeneration(generationArgs, cancellationToken);

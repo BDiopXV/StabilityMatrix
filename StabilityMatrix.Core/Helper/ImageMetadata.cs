@@ -372,7 +372,16 @@ public class ImageMetadata
 
             try
             {
-                VlcCore.Initialize();
+                // Try explicit path first for published exe scenarios
+                var libVlcPath = Path.Combine(AppContext.BaseDirectory, "libvlc", "win-x64");
+                if (System.IO.Directory.Exists(libVlcPath))
+                {
+                    VlcCore.Initialize(libVlcPath);
+                }
+                else
+                {
+                    VlcCore.Initialize();
+                }
                 libVlcInitialized = true;
                 return true;
             }

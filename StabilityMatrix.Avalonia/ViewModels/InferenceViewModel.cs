@@ -79,6 +79,8 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
 
     public SharedState SharedState { get; }
 
+    public ComfyResourceMonitorViewModel ComfyResourceMonitorViewModel { get; }
+
     public ObservableCollection<InferenceTabViewModelBase> Tabs { get; } = new();
 
     [ObservableProperty]
@@ -106,7 +108,8 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
         IModelIndexService modelIndexService,
         ILiteDbContext liteDbContext,
         RunningPackageService runningPackageService,
-        SharedState sharedState
+        SharedState sharedState,
+        ComfyResourceMonitorViewModel comfyResourceMonitorViewModel
     )
     {
         this.vmFactory = vmFactory;
@@ -118,6 +121,7 @@ public partial class InferenceViewModel : PageViewModelBase, IAsyncDisposable
 
         ClientManager = inferenceClientManager;
         SharedState = sharedState;
+        ComfyResourceMonitorViewModel = comfyResourceMonitorViewModel;
 
         // Keep RunningPackage updated with the current package pair
         runningPackageService.RunningPackages.CollectionChanged += RunningPackagesOnCollectionChanged;

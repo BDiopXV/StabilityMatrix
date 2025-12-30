@@ -80,7 +80,7 @@
             </sg:SpacedGrid>
 
             <!--  Integrations  -->
-            <sg:SpacedGrid RowDefinitions="Auto,*,*" RowSpacing="4">
+            <sg:SpacedGrid RowDefinitions="Auto,*,*,*" RowSpacing="4">
                 <TextBlock
                     Margin="0,0,0,4"
                     FontWeight="Medium"
@@ -100,8 +100,25 @@
                             Symbol="Person" />
                     </ui:SettingsExpander.IconSource>
                 </ui:SettingsExpander>
+                <!--  Link to LM Studio Sub-Settings  -->
                 <ui:SettingsExpander
                     Grid.Row="2"
+                    Margin="8,0"
+                    ActionIconSource="ChevronRight"
+                    Command="{Binding NavigateToSubPageCommand}"
+                    CommandParameter="{x:Type vmSettings:LmStudioSettingsViewModel}"
+                    Description="Configure LM Studio for prompt enhancement and image analysis"
+                    Header="LM Studio"
+                    IsClickEnabled="True">
+                    <ui:SettingsExpander.IconSource>
+                        <fluentIcons:SymbolIconSource
+                            FontSize="10"
+                            IconVariant="Filled"
+                            Symbol="Bot" />
+                    </ui:SettingsExpander.IconSource>
+                </ui:SettingsExpander>
+                <ui:SettingsExpander
+                    Grid.Row="3"
                     Margin="8,0,8,4"
                     Header="{x:Static lang:Resources.Label_DiscordRichPresence}">
                     <ui:SettingsExpander.IconSource>

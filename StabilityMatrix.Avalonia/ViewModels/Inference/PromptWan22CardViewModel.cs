@@ -61,6 +61,8 @@ public partial class PromptWan22CardViewModel
     private readonly ILogger<PromptWan22CardViewModel> logger;
     private readonly IAccountsService accountsService;
     private readonly IServiceManager<ViewModelBase> vmFactory;
+    private readonly ILmStudioService lmStudioService;
+    private readonly IRandomTagService randomTagService;
 
     /// <summary>
     /// Cache of prompt text to tokenized Prompt
@@ -122,6 +124,60 @@ public partial class PromptWan22CardViewModel
     [ObservableProperty]
     public partial bool IsStackCardEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Optional provider for input images, used for LM Studio image analysis.
+    /// Set by parent view models that have image input capabilities.
+    /// </summary>
+    [ObservableProperty]
+    public partial IInputImageProvider? InputImageProvider { get; set; }
+
+    /// <summary>
+    /// Whether the LM Studio enhance button is visible.
+    /// </summary>
+    public bool IsLmStudioEnabled => settingsManager.Settings.LmStudioSettings?.IsEnabled ?? false;
+
+    /// <summary>
+    /// Whether the LM Studio enhancement is currently running.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLmStudioButtonsEnabled))]
+    public partial bool IsLmStudioEnhancing { get; set; }
+
+    /// <summary>
+    /// Whether to use NSFW mode for LM Studio prompt enhancement.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsNsfwModeEnabled { get; set; }
+
+    /// <summary>
+    /// Optional provider for LoRA trigger words.
+    /// Set by parent view models that have LoRA selection capabilities.
+    /// Returns a list of trigger words from all enabled LoRAs.
+    /// </summary>
+    public Func<IEnumerable<string>>? LoraTriggerWordsProvider { get; set; }
+
+    /// <summary>
+    /// Whether random tag generation is in progress.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLmStudioButtonsEnabled))]
+    public partial bool IsRandomTagsGenerating { get; set; }
+
+    /// <summary>
+    /// Whether image/video generation is currently running.
+    /// Set by parent view models to disable LM Studio buttons during generation.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLmStudioButtonsEnabled))]
+    public partial bool IsGenerationRunning { get; set; }
+
+    /// <summary>
+    /// Whether LM Studio buttons should be enabled.
+    /// Disabled when generation is running or LM Studio operations are in progress.
+    /// </summary>
+    public bool IsLmStudioButtonsEnabled =>
+        !IsGenerationRunning && !IsLmStudioEnhancing && !IsRandomTagsGenerating;
+
     public bool ShowLowTokenWarning => TokensRemaining <= LowTokenThreshold && TokensRemaining >= 0;
 
     public string LowTokenWarningText =>
@@ -147,7 +203,9 @@ public partial class PromptWan22CardViewModel
         ILogger<PromptWan22CardViewModel> logger,
         IAccountsService accountsService,
         SharedState sharedState,
-        TabContext tabContext
+        TabContext tabContext,
+        ILmStudioService lmStudioService,
+        IRandomTagService randomTagService
     )
     {
         this.modelIndexService = modelIndexService;
@@ -158,6 +216,8 @@ public partial class PromptWan22CardViewModel
         this.logger = logger;
         this.accountsService = accountsService;
         this.vmFactory = vmFactory;
+        this.lmStudioService = lmStudioService;
+        this.randomTagService = randomTagService;
         CompletionProvider = completionProvider;
         TokenizerProvider = tokenizerProvider;
         SharedState = sharedState;
@@ -738,6 +798,229 @@ public partial class PromptWan22CardViewModel
     [RelayCommand]
     private Task ShowAmplifierDisclaimer() =>
         DialogHelper.CreateMarkdownDialog(Resources.PromptAmplifier_Disclaimer).ShowAsync();
+
+    /// <summary>
+    /// Automatically enhances the video prompt if AutoEnhancePrompts setting is enabled.
+    /// Called before generation to apply automatic enhancement using video-specific directives.
+    /// </summary>
+    /// <returns>True if enhancement was successful or not needed, false if enhancement failed</returns>
+    public async Task<bool> AutoEnhanceIfEnabledAsync()
+    {
+        var lmSettings = settingsManager.Settings.LmStudioSettings;
+        if (lmSettings?.IsEnabled != true || !lmSettings.AutoEnhancePrompts)
+        {
+            return true; // Auto-enhance not enabled, continue with generation
+        }
+
+        // Skip if prompt is empty (nothing to enhance)
+        var currentPrompt = PromptDocument.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(currentPrompt))
+        {
+            return true;
+        }
+
+        try
+        {
+            IsLmStudioEnhancing = true;
+            var hasImage = InputImageProvider?.GetInputImages().FirstOrDefault()?.LocalFile?.Exists == true;
+            var useNsfw = IsNsfwModeEnabled;
+            var negativePrompt = NegativePromptDocument.Text?.Trim();
+            var loraTriggerWords = LoraTriggerWordsProvider?.Invoke();
+
+            string enhancedPrompt;
+            if (hasImage)
+            {
+                var imageBytes = await InputImageProvider!
+                    .GetInputImages()
+                    .First()
+                    .LocalFile!.ReadAllBytesAsync();
+                enhancedPrompt = await lmStudioService.GenerateVideoPromptFromImageAsync(
+                    imageBytes,
+                    currentPrompt,
+                    negativePrompt,
+                    loraTriggerWords,
+                    useNsfw
+                );
+            }
+            else
+            {
+                enhancedPrompt = await lmStudioService.EnhanceVideoPromptAsync(
+                    currentPrompt,
+                    negativePrompt,
+                    loraTriggerWords,
+                    useNsfw
+                );
+            }
+
+            PromptDocument.Text = enhancedPrompt;
+
+            try
+            {
+                await lmStudioService.UnloadModelsAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to unload LM Studio models after auto-enhance (video)");
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error auto-enhancing video prompt with LM Studio");
+            notificationService.Show(
+                "Auto-Enhance Error",
+                $"Failed to auto-enhance video prompt: {e.Message}",
+                NotificationType.Error
+            );
+            return false;
+        }
+        finally
+        {
+            IsLmStudioEnhancing = false;
+        }
+    }
+
+    /// <summary>
+    /// Enhances the prompt using LM Studio with video-specific directives.
+    /// - If there's an image and no prompt: generates a video prompt from the image
+    /// - If there's an image and a prompt: enhances the video prompt based on both
+    /// - If there's no image: generates/enhances the video prompt based on text directives
+    /// Uses VideoGenerationDirective (SFW) or VideoGenerationDirectiveNsfw based on mode.
+    /// </summary>
+    [RelayCommand]
+    private async Task LmStudioEnhancePrompt()
+    {
+        if (settingsManager.Settings.LmStudioSettings?.IsEnabled != true)
+        {
+            notificationService.Show(
+                "LM Studio Not Enabled",
+                "Please enable LM Studio integration in Settings > Integrations > LM Studio",
+                NotificationType.Warning
+            );
+            return;
+        }
+
+        IsLmStudioEnhancing = true;
+        try
+        {
+            var currentPrompt = PromptDocument.Text?.Trim() ?? string.Empty;
+            var hasPrompt = !string.IsNullOrWhiteSpace(currentPrompt);
+            var imageSource = InputImageProvider?.GetInputImages().FirstOrDefault();
+            var hasImage = imageSource?.LocalFile?.Exists == true;
+            var useNsfw = IsNsfwModeEnabled;
+            var negativePrompt = NegativePromptDocument.Text?.Trim();
+            var loraTriggerWords = LoraTriggerWordsProvider?.Invoke();
+
+            string enhancedPrompt;
+
+            if (hasImage)
+            {
+                // We have an image - use vision model to analyze and enhance for video
+                var imageBytes = await imageSource!.LocalFile!.ReadAllBytesAsync();
+
+                // Generate video prompt from image (with or without existing prompt)
+                enhancedPrompt = await lmStudioService.GenerateVideoPromptFromImageAsync(
+                    imageBytes,
+                    hasPrompt ? currentPrompt : null,
+                    negativePrompt,
+                    loraTriggerWords,
+                    useNsfw
+                );
+            }
+            else
+            {
+                // No image - use text-only video enhancement
+                if (hasPrompt)
+                {
+                    enhancedPrompt = await lmStudioService.EnhanceVideoPromptAsync(
+                        currentPrompt,
+                        negativePrompt,
+                        loraTriggerWords,
+                        useNsfw
+                    );
+                }
+                else
+                {
+                    // No prompt and no image - generate a creative video prompt
+                    enhancedPrompt = await lmStudioService.GenerateCreativePromptAsync(useNsfw);
+                }
+            }
+
+            // Update the prompt document with the enhanced prompt
+            PromptDocument.Text = enhancedPrompt;
+
+            notificationService.Show(
+                "Video Prompt Enhanced",
+                "Your video prompt has been enhanced using LM Studio",
+                NotificationType.Success
+            );
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error enhancing video prompt with LM Studio");
+            notificationService.Show(
+                "LM Studio Error",
+                $"Failed to enhance video prompt: {e.Message}",
+                NotificationType.Error
+            );
+        }
+        finally
+        {
+            IsLmStudioEnhancing = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task GenerateRandomTags()
+    {
+        if (settingsManager.Settings.LmStudioSettings?.IsEnabled != true)
+        {
+            notificationService.Show(
+                "LM Studio Not Enabled",
+                "Please enable LM Studio integration in Settings > Integrations > LM Studio",
+                NotificationType.Warning
+            );
+            return;
+        }
+
+        IsRandomTagsGenerating = true;
+        try
+        {
+            // Get a random prompt or tag list (prefers prompts.jsonl if present)
+            var tagsContext = await randomTagService.GetRandomPromptAsync(20, IsNsfwModeEnabled);
+
+            // Use LM Studio to generate a creative video prompt based on the random tags/prompt
+            var loraWords = LoraTriggerWordsProvider?.Invoke();
+            var generatedPrompt = await lmStudioService.GenerateVideoPromptFromTagsAsync(
+                tagsContext,
+                loraWords,
+                IsNsfwModeEnabled
+            );
+
+            // Replace the current prompt with the new generated one
+            PromptDocument.Text = generatedPrompt;
+
+            notificationService.Show(
+                "Video Prompt Generated",
+                "A creative video prompt has been generated using random tags as inspiration",
+                NotificationType.Success
+            );
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error generating video prompt from random tags");
+            notificationService.Show(
+                "Generation Error",
+                $"Failed to generate video prompt: {e.Message}",
+                NotificationType.Error
+            );
+        }
+        finally
+        {
+            IsRandomTagsGenerating = false;
+        }
+    }
 
     partial void OnIsBalancedChanged(bool value)
     {

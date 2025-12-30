@@ -1,11 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Reactive.Linq;
 using System.Text.Json.Serialization;
+using System.Threading;
+using DynamicData.Binding;
 using Injectio.Attributes;
 using StabilityMatrix.Avalonia.Models;
 using StabilityMatrix.Avalonia.Models.Inference;
 using StabilityMatrix.Avalonia.Services;
 using StabilityMatrix.Avalonia.ViewModels.Base;
 using StabilityMatrix.Avalonia.ViewModels.Inference;
+using StabilityMatrix.Avalonia.ViewModels.Inference.Modules;
 using StabilityMatrix.Avalonia.ViewModels.Inference.Video;
 using StabilityMatrix.Avalonia.Views.Inference;
 using StabilityMatrix.Core.Attributes;
@@ -75,6 +79,21 @@ public class InferenceWan22ImageToVideoViewModel : InferenceGenerationViewModelB
 
         PromptCardViewModel = AddDisposable(vmFactory.Get<PromptWan22CardViewModel>());
 
+        // Set up trigger words provider to get LoRA trigger words from both High and Low stacks
+        PromptCardViewModel.LoraTriggerWordsProvider = () =>
+            GetLoraTriggerWords(
+                ModelCardViewModel.ExtraNetworksHighStack,
+                ModelCardViewModel.ExtraNetworksLowStack
+            );
+
+        // Bind GenerateImageCommand.IsRunning to PromptCardViewModel.IsGenerationRunning
+        AddDisposable(
+            GenerateImageCommand
+                .WhenPropertyChanged(x => x.IsRunning)
+                .ObserveOn(SynchronizationContext.Current)
+                .Subscribe(e => PromptCardViewModel.IsGenerationRunning = e.Value)
+        );
+
         BatchSizeCardViewModel = vmFactory.Get<BatchSizeCardViewModel>();
 
         VideoOutputSettingsCardViewModel = vmFactory.Get<VideoWan22OutputSettingsCardViewModel>(vm =>
@@ -95,6 +114,9 @@ public class InferenceWan22ImageToVideoViewModel : InferenceGenerationViewModelB
         SamplerCardViewModel.IsDenoiseStrengthEnabled = true;
 
         ModelCardViewModel.IsClipVisionEnabled = true;
+
+        // Set up the image provider for LM Studio enhancement
+        PromptCardViewModel.InputImageProvider = SelectImageCardViewModel;
     }
 
     /// <inheritdoc />
@@ -162,10 +184,17 @@ public class InferenceWan22ImageToVideoViewModel : InferenceGenerationViewModelB
         CancellationToken cancellationToken
     )
     {
+        // Unload LM Studio models to free VRAM before generation
+        await UnloadLmStudioModelsAsync(cancellationToken);
+
         if (!await CheckClientConnectedWithPrompt() || !ClientManager.IsConnected)
         {
             return;
         }
+
+        // Auto-enhance video prompt if enabled
+        if (!await PromptCardViewModel.AutoEnhanceIfEnabledAsync())
+            return;
 
         if (!await ModelCardViewModel.ValidateModel())
             return;
@@ -251,5 +280,27 @@ public class InferenceWan22ImageToVideoViewModel : InferenceGenerationViewModelB
         parameters.Seed = (ulong)SeedCardViewModel.Seed;
 
         return parameters;
+    }
+
+    private static IEnumerable<string> GetLoraTriggerWords(params StackEditableCardViewModel[] stacks)
+    {
+        foreach (var stack in stacks)
+        {
+            foreach (var module in stack.Cards.OfType<Wan22LoraModule>())
+            {
+                if (!module.IsEnabled)
+                    continue;
+
+                var card = module.GetCard<ExtraNetworkCardViewModel>();
+                if (card?.SelectedModel?.Local?.ConnectedModelInfo?.TrainedWords is { } trainedWords)
+                {
+                    foreach (var word in trainedWords)
+                    {
+                        if (!string.IsNullOrWhiteSpace(word))
+                            yield return word;
+                    }
+                }
+            }
+        }
     }
 }

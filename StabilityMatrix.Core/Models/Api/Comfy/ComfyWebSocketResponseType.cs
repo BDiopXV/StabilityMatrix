@@ -29,4 +29,7 @@ public enum ComfyWebSocketResponseType
 
     [EnumMember(Value = "executed")]
     Executed,
+
+    [EnumMember(Value = "system_stats")]
+    SystemStats,
 }

@@ -141,6 +141,61 @@
                     Orientation="Horizontal"
                     Spacing="2">
 
+                    <!--  ComfyUI Resource Monitor  -->
+                    <StackPanel
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        DataContext="{Binding ComfyResourceMonitorViewModel}"
+                        IsVisible="{Binding IsVisible}"
+                        Orientation="Horizontal"
+                        Spacing="4">
+                        <controls:ResourceUsageCircle
+                            Width="26"
+                            Height="26"
+                            IndicatorBrush="{Binding CpuBrush}"
+                            Label="CPU"
+                            Maximum="100"
+                            StrokeThickness="2"
+                            ValueText="{Binding CpuText}"
+                            Value="{Binding CpuUsage}" />
+                        <controls:ResourceUsageCircle
+                            Width="26"
+                            Height="26"
+                            IndicatorBrush="{Binding RamBrush}"
+                            Label="RAM"
+                            Maximum="100"
+                            StrokeThickness="2"
+                            ValueText="{Binding RamText}"
+                            Value="{Binding RamUsage}" />
+                        <controls:ResourceUsageCircle
+                            Width="26"
+                            Height="26"
+                            IndicatorBrush="{Binding GpuBrush}"
+                            Label="GPU"
+                            Maximum="100"
+                            StrokeThickness="2"
+                            ValueText="{Binding GpuText}"
+                            Value="{Binding GpuUsage}" />
+                        <controls:ResourceUsageCircle
+                            Width="26"
+                            Height="26"
+                            IndicatorBrush="{Binding VramBrush}"
+                            Label="VRAM"
+                            Maximum="100"
+                            StrokeThickness="2"
+                            ValueText="{Binding VramText}"
+                            Value="{Binding VramUsage}" />
+                        <controls:ResourceUsageCircle
+                            Width="26"
+                            Height="26"
+                            IndicatorBrush="{Binding TemperatureBrush}"
+                            Label="T°"
+                            Maximum="100"
+                            StrokeThickness="2"
+                            ValueText="{Binding TemperatureText}"
+                            Value="{Binding GpuTemperature}" />
+                    </StackPanel>
+
                     <!--  Connecting Progress  -->
                     <controls:ProgressRing
                         Margin="0,0,4,0"

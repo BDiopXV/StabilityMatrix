@@ -392,6 +392,129 @@
                                             NavigateUri="https://lykos.ai/prompt-amplifier/help" />
                                     </StackPanel>
                                 </ui:TeachingTip>
+                                <!--  LM Studio Enhance Button  -->
+                                <Button
+                                    x:Name="PART_LmStudioButton"
+                                    Padding="6,2,6,1"
+                                    VerticalAlignment="Top"
+                                    VerticalContentAlignment="Top"
+                                    Classes="transparent-full"
+                                    Command="{Binding LmStudioEnhancePromptCommand}"
+                                    IsEnabled="{Binding IsLmStudioButtonsEnabled}"
+                                    IsVisible="{Binding IsLmStudioEnabled}"
+                                    ToolTip.Tip="Enhance with LM Studio">
+                                    <Grid
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center">
+                                        <!--  Brain icon for LM Studio  -->
+                                        <fluent:SymbolIcon
+                                            x:Name="LmStudioIcon"
+                                            Classes.running="{Binding IsLmStudioEnhancing}"
+                                            FontSize="16"
+                                            RenderTransformOrigin="50% 50%"
+                                            Symbol="BrainCircuit">
+                                            <fluent:SymbolIcon.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </fluent:SymbolIcon.RenderTransform>
+                                            <fluent:SymbolIcon.Styles>
+                                                <Style Selector="fluent|SymbolIcon.running">
+                                                    <Style.Animations>
+                                                        <Animation IterationCount="Infinite" Duration="0:0:1.5">
+                                                            <KeyFrame Cue="0%">
+                                                                <Setter Property="RotateTransform.Angle" Value="0" />
+                                                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                                            </KeyFrame>
+                                                            <KeyFrame Cue="50%">
+                                                                <Setter Property="RotateTransform.Angle" Value="10" />
+                                                                <Setter Property="Foreground" Value="#FF00BFFF" />
+                                                            </KeyFrame>
+                                                            <KeyFrame Cue="100%">
+                                                                <Setter Property="RotateTransform.Angle" Value="0" />
+                                                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                                            </KeyFrame>
+                                                        </Animation>
+                                                    </Style.Animations>
+                                                </Style>
+                                            </fluent:SymbolIcon.Styles>
+                                        </fluent:SymbolIcon>
+                                    </Grid>
+                                </Button>
+                                <!--  NSFW Mode Toggle Button  -->
+                                <ToggleButton
+                                    x:Name="PART_NsfwToggle"
+                                    Padding="6,2,6,1"
+                                    VerticalAlignment="Top"
+                                    VerticalContentAlignment="Top"
+                                    Classes="transparent-full"
+                                    IsChecked="{Binding IsNsfwModeEnabled}"
+                                    IsEnabled="{Binding IsLmStudioButtonsEnabled}"
+                                    IsVisible="{Binding IsLmStudioEnabled}"
+                                    ToolTip.Tip="Toggle NSFW Mode for LM Studio">
+                                    <Grid
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center">
+                                        <fluent:SymbolIcon
+                                            x:Name="NsfwIcon"
+                                            Classes.enabled="{Binding IsNsfwModeEnabled}"
+                                            FontSize="14"
+                                            Foreground="#77FFFFFF"
+                                            Symbol="Warning">
+                                            <fluent:SymbolIcon.Styles>
+                                                <Style Selector="fluent|SymbolIcon.enabled">
+                                                    <Setter Property="Foreground" Value="#FFFF6B6B" />
+                                                </Style>
+                                            </fluent:SymbolIcon.Styles>
+                                        </fluent:SymbolIcon>
+                                    </Grid>
+                                </ToggleButton>
+                                <!--  Random Tags Button  -->
+                                <Button
+                                    x:Name="PART_RandomTagsButton"
+                                    Padding="6,2,6,1"
+                                    VerticalAlignment="Top"
+                                    VerticalContentAlignment="Top"
+                                    Classes="transparent-full"
+                                    Command="{Binding GenerateRandomTagsCommand}"
+                                    IsEnabled="{Binding IsLmStudioButtonsEnabled}"
+                                    ToolTip.Tip="Generate random tags from danbooru/e621">
+                                    <Grid
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center">
+                                        <fluent:SymbolIcon
+                                            x:Name="RandomTagsIcon"
+                                            Classes.running="{Binding IsRandomTagsGenerating}"
+                                            FontSize="16"
+                                            RenderTransformOrigin="50% 50%"
+                                            Symbol="Diversity">
+                                            <fluent:SymbolIcon.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </fluent:SymbolIcon.RenderTransform>
+                                            <fluent:SymbolIcon.Styles>
+                                                <Style Selector="fluent|SymbolIcon.running">
+                                                    <Style.Animations>
+                                                        <Animation IterationCount="Infinite" Duration="0:0:0.8">
+                                                            <KeyFrame Cue="0%">
+                                                                <Setter Property="RotateTransform.Angle" Value="0" />
+                                                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                                            </KeyFrame>
+                                                            <KeyFrame Cue="50%">
+                                                                <Setter Property="RotateTransform.Angle" Value="180" />
+                                                                <Setter Property="Foreground" Value="#FF9B59B6" />
+                                                            </KeyFrame>
+                                                            <KeyFrame Cue="100%">
+                                                                <Setter Property="RotateTransform.Angle" Value="360" />
+                                                                <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                                            </KeyFrame>
+                                                        </Animation>
+                                                    </Style.Animations>
+                                                </Style>
+                                            </fluent:SymbolIcon.Styles>
+                                        </fluent:SymbolIcon>
+                                    </Grid>
+                                </Button>
                                 <Button Classes="transparent-full" Content="{iconExt:FluentIcon Icon=MoreVertical, FontSize=16, IconVariant=Regular}">
                                     <Button.Flyout>
                                         <MenuFlyout>

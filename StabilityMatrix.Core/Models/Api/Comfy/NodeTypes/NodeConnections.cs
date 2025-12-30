@@ -6,6 +6,8 @@ public class VAENodeConnection : NodeConnectionBase;
 
 public class ImageNodeConnection : NodeConnectionBase;
 
+public class ControlEmbedsNodeConnection : NodeConnectionBase;
+
 public class ImageWidthNodeConnection : NodeConnectionBase;
 
 public class ImageHeightNodeConnection : NodeConnectionBase;

@@ -356,7 +356,8 @@ public sealed class App : Application
             provider.GetRequiredService<IUpdateHelper>(),
             provider.GetRequiredService<ISecretsManager>(),
             provider.GetRequiredService<INavigationService<MainWindowViewModel>>(),
-            provider.GetRequiredService<INavigationService<SettingsViewModel>>()
+            provider.GetRequiredService<INavigationService<SettingsViewModel>>(),
+            provider.GetRequiredService<ComfyResourceMonitorViewModel>()
         )
         {
             Pages =
@@ -772,6 +773,9 @@ public sealed class App : Application
 
         // Add Refit client managers
         services.AddHttpClient("A3Client").AddPolicyHandler(localRetryPolicy);
+
+        // Add LM Studio client (local LLM, no retry policy to fail fast)
+        services.AddHttpClient("LmStudio");
 
         services
             .AddHttpClient("DontFollowRedirects")

@@ -1,0 +1,423 @@
+﻿<controls:UserControlBase
+    x:Class="StabilityMatrix.Avalonia.Views.Settings.LmStudioSettingsPage"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:StabilityMatrix.Avalonia.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:fluentIcons="clr-namespace:FluentIcons.Avalonia.Fluent;assembly=FluentIcons.Avalonia.Fluent"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:sg="clr-namespace:SpacedGridControl.Avalonia;assembly=SpacedGridControl.Avalonia"
+    xmlns:ui="using:FluentAvalonia.UI.Controls"
+    xmlns:vmSettings="clr-namespace:StabilityMatrix.Avalonia.ViewModels.Settings"
+    d:DesignHeight="900"
+    d:DesignWidth="900"
+    x:DataType="vmSettings:LmStudioSettingsViewModel"
+    mc:Ignorable="d">
+
+    <controls:UserControlBase.Styles>
+        <Style Selector="sg|SpacedGrid &gt; ui|SettingsExpander">
+            <Setter Property="Margin" Value="8,0" />
+        </Style>
+    </controls:UserControlBase.Styles>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="8,16" Spacing="8">
+
+            <!--  Enable/Disable Section  -->
+            <sg:SpacedGrid RowDefinitions="Auto,*" RowSpacing="4">
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontWeight="Medium"
+                    Text="LM Studio Integration" />
+
+                <ui:SettingsExpander
+                    Grid.Row="1"
+                    Description="Enable LM Studio integration for prompt enhancement and image analysis"
+                    Header="Enable LM Studio">
+                    <ui:SettingsExpander.IconSource>
+                        <fluentIcons:SymbolIconSource Symbol="Bot" />
+                    </ui:SettingsExpander.IconSource>
+                    <ui:SettingsExpander.Footer>
+                        <ToggleSwitch IsChecked="{Binding IsEnabled}" />
+                    </ui:SettingsExpander.Footer>
+                </ui:SettingsExpander>
+            </sg:SpacedGrid>
+
+            <!--  Connection Settings  -->
+            <sg:SpacedGrid
+                IsEnabled="{Binding IsEnabled}"
+                RowDefinitions="Auto,*"
+                RowSpacing="4">
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontWeight="Medium"
+                    Text="Connection" />
+
+                <ui:SettingsExpander
+                    Grid.Row="1"
+                    Header="Server Settings"
+                    IsExpanded="True">
+                    <ui:SettingsExpander.IconSource>
+                        <fluentIcons:SymbolIconSource Symbol="Server" />
+                    </ui:SettingsExpander.IconSource>
+
+                    <!--  Endpoint URL  -->
+                    <ui:SettingsExpanderItem Content="Endpoint URL" Description="LM Studio API server address (default: http://localhost:1234)">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="Globe" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <TextBox
+                                Width="250"
+                                Text="{Binding EndpointUrl}"
+                                Watermark="http://localhost:1234" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+
+                    <!--  Test Connection Button  -->
+                    <ui:SettingsExpanderItem Content="Test Connection" Description="{Binding ConnectionStatusMessage}">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="PlugConnected" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ui:ProgressRing
+                                    Width="20"
+                                    Height="20"
+                                    IsIndeterminate="True"
+                                    IsVisible="{Binding IsTestingConnection}" />
+                                <fluentIcons:SymbolIcon
+                                    Foreground="Green"
+                                    IsVisible="{Binding IsConnectionSuccessful}"
+                                    Symbol="CheckmarkCircle" />
+                                <Button
+                                    Command="{Binding TestConnectionCommand}"
+                                    Content="Test"
+                                    IsEnabled="{Binding !IsTestingConnection}" />
+                            </StackPanel>
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+
+                    <!--  Timeout  -->
+                    <ui:SettingsExpanderItem Content="Timeout (seconds)" Description="How long to wait for LM Studio responses">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="Timer" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <ui:NumberBox
+                                Width="120"
+                                Maximum="300"
+                                Minimum="10"
+                                SpinButtonPlacementMode="Inline"
+                                Value="{Binding TimeoutSeconds}" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+                </ui:SettingsExpander>
+            </sg:SpacedGrid>
+
+            <!--  Model Selection  -->
+            <sg:SpacedGrid
+                IsEnabled="{Binding IsEnabled}"
+                RowDefinitions="Auto,*"
+                RowSpacing="4">
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontWeight="Medium"
+                    Text="Model Selection" />
+
+                <ui:SettingsExpander
+                    Grid.Row="1"
+                    Header="Models"
+                    IsExpanded="True">
+                    <ui:SettingsExpander.IconSource>
+                        <fluentIcons:SymbolIconSource Symbol="BrainCircuit" />
+                    </ui:SettingsExpander.IconSource>
+
+                    <!--  Text Model  -->
+                    <ui:SettingsExpanderItem Content="Text Model" Description="Model for text prompt enhancement (leave empty to use loaded model)">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="TextDescription" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ComboBox
+                                    Width="200"
+                                    ItemsSource="{Binding AvailableModels}"
+                                    SelectedItem="{Binding TextModel}" />
+                                <Button
+                                    Command="{Binding RefreshModelsCommand}"
+                                    Content="Refresh"
+                                    ToolTip.Tip="Refresh available models from LM Studio" />
+                            </StackPanel>
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+
+                    <!--  Vision Model  -->
+                    <ui:SettingsExpanderItem Content="Vision Model" Description="Model for image analysis (requires vision-capable model)">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="ImageSearch" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <ComboBox
+                                Width="200"
+                                ItemsSource="{Binding AvailableModels}"
+                                SelectedItem="{Binding VisionModel}" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+                </ui:SettingsExpander>
+            </sg:SpacedGrid>
+
+            <!--  Generation Settings  -->
+            <sg:SpacedGrid
+                IsEnabled="{Binding IsEnabled}"
+                RowDefinitions="Auto,*"
+                RowSpacing="4">
+                <TextBlock
+                    Margin="0,0,0,4"
+                    FontWeight="Medium"
+                    Text="Generation Settings" />
+
+                <ui:SettingsExpander
+                    Grid.Row="1"
+                    Header="Parameters"
+                    IsExpanded="True">
+                    <ui:SettingsExpander.IconSource>
+                        <fluentIcons:SymbolIconSource Symbol="Settings" />
+                    </ui:SettingsExpander.IconSource>
+
+                    <!--  Temperature  -->
+                    <ui:SettingsExpanderItem Content="Temperature" Description="Lower values are more focused, higher values more creative (0.0-2.0)">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="Temperature" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <ui:NumberBox
+                                Width="120"
+                                Maximum="2"
+                                Minimum="0"
+                                SmallChange="0.1"
+                                SpinButtonPlacementMode="Inline"
+                                Value="{Binding Temperature}" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+
+                    <!--  Max Tokens  -->
+                    <ui:SettingsExpanderItem Content="Max Tokens" Description="Maximum number of tokens to generate">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="TextBulletListSquare" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <ui:NumberBox
+                                Width="120"
+                                Maximum="4096"
+                                Minimum="50"
+                                SmallChange="50"
+                                SpinButtonPlacementMode="Inline"
+                                Value="{Binding MaxTokens}" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+
+                    <!--  Auto Enhance  -->
+                    <ui:SettingsExpanderItem Content="Auto-Enhance Prompts" Description="Automatically enhance prompts before generation">
+                        <ui:SettingsExpanderItem.IconSource>
+                            <fluentIcons:SymbolIconSource Symbol="Sparkle" />
+                        </ui:SettingsExpanderItem.IconSource>
+                        <ui:SettingsExpanderItem.Footer>
+                            <ToggleSwitch IsChecked="{Binding AutoEnhancePrompts}" />
+                        </ui:SettingsExpanderItem.Footer>
+                    </ui:SettingsExpanderItem>
+                </ui:SettingsExpander>
+            </sg:SpacedGrid>
+
+            <!--  SFW Directives Section  -->
+            <TextBlock
+                Margin="8,8,0,4"
+                FontSize="14"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                IsEnabled="{Binding IsEnabled}"
+                Text="SFW Directives (Safe For Work)" />
+
+            <!--  Text Enhancement Directive Editor (SFW)  -->
+            <Border
+                Margin="8,0"
+                Padding="12"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Text Enhancement Directive (SFW)" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetTextDirectiveCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding TextEnhancementDirective}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for text prompt enhancement (SFW)..." />
+                </StackPanel>
+            </Border>
+
+            <!--  Image Analysis Directive Editor (SFW)  -->
+            <Border
+                Margin="8,0"
+                Padding="12"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Image Analysis Directive (SFW)" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetImageDirectiveCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding ImageAnalysisDirective}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for image analysis (SFW)..." />
+                </StackPanel>
+            </Border>
+
+            <!--  Video Generation Directive Editor (SFW)  -->
+            <Border
+                Margin="8,0"
+                Padding="12"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Video Generation Directive (SFW) - Wan22" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetVideoDirectiveCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding VideoGenerationDirective}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for video generation (SFW)..." />
+                </StackPanel>
+            </Border>
+
+            <!--  NSFW Directives Section  -->
+            <TextBlock
+                Margin="8,16,0,4"
+                FontSize="14"
+                FontWeight="SemiBold"
+                Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                IsEnabled="{Binding IsEnabled}"
+                Text="NSFW Directives (Not Safe For Work)" />
+
+            <!--  Text Enhancement Directive Editor (NSFW)  -->
+            <Border
+                Margin="8,0"
+                Padding="12"
+                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Text Enhancement Directive (NSFW)" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetTextDirectiveNsfwCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding TextEnhancementDirectiveNsfw}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for text prompt enhancement (NSFW)..." />
+                </StackPanel>
+            </Border>
+
+            <!--  Image Analysis Directive Editor (NSFW)  -->
+            <Border
+                Margin="8,0"
+                Padding="12"
+                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Image Analysis Directive (NSFW)" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetImageDirectiveNsfwCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding ImageAnalysisDirectiveNsfw}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for image analysis (NSFW)..." />
+                </StackPanel>
+            </Border>
+
+            <!--  Video Generation Directive Editor (NSFW)  -->
+            <Border
+                Margin="8,0,8,16"
+                Padding="12"
+                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                IsEnabled="{Binding IsEnabled}">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="Video Generation Directive (NSFW) - Wan22" />
+                        <Button
+                            Padding="8,4"
+                            Command="{Binding ResetVideoDirectiveNsfwCommand}"
+                            Content="Reset" />
+                    </StackPanel>
+                    <TextBox
+                        Height="120"
+                        AcceptsReturn="True"
+                        Text="{Binding VideoGenerationDirectiveNsfw}"
+                        TextWrapping="Wrap"
+                        Watermark="Enter the system directive for video generation (NSFW)..." />
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</controls:UserControlBase>

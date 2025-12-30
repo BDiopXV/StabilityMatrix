@@ -21,6 +21,80 @@ namespace StabilityMatrix.Avalonia.Models.Inference;
 
 public record Prompt
 {
+    /// <summary>
+    /// Sanitizes a prompt string by escaping colons that are not inside valid bracket contexts.
+    /// This prevents syntax errors when colons are used in text like "character: name".
+    /// </summary>
+    /// <param name="promptText">The raw prompt text to sanitize.</param>
+    /// <returns>Sanitized prompt text with unbracketed colons escaped.</returns>
+    public static string SanitizeColons(string promptText)
+    {
+        if (string.IsNullOrEmpty(promptText))
+            return promptText;
+
+        var result = new StringBuilder(promptText.Length + 10);
+        var parenDepth = 0;
+        var bracketDepth = 0;
+        var angleBracketDepth = 0;
+        var curlyBracketDepth = 0;
+
+        for (var i = 0; i < promptText.Length; i++)
+        {
+            var c = promptText[i];
+            var prevChar = i > 0 ? promptText[i - 1] : '\0';
+
+            // Track bracket depths (ignoring escaped brackets)
+            if (prevChar != '\\')
+            {
+                switch (c)
+                {
+                    case '(':
+                        parenDepth++;
+                        break;
+                    case ')':
+                        parenDepth = Math.Max(0, parenDepth - 1);
+                        break;
+                    case '[':
+                        bracketDepth++;
+                        break;
+                    case ']':
+                        bracketDepth = Math.Max(0, bracketDepth - 1);
+                        break;
+                    case '<':
+                        angleBracketDepth++;
+                        break;
+                    case '>':
+                        angleBracketDepth = Math.Max(0, angleBracketDepth - 1);
+                        break;
+                    case '{':
+                        curlyBracketDepth++;
+                        break;
+                    case '}':
+                        curlyBracketDepth = Math.Max(0, curlyBracketDepth - 1);
+                        break;
+                }
+            }
+
+            // Handle colons
+            if (c == ':' && prevChar != '\\')
+            {
+                // Check if we're inside any bracket context
+                var insideBrackets =
+                    parenDepth > 0 || bracketDepth > 0 || angleBracketDepth > 0 || curlyBracketDepth > 0;
+
+                if (!insideBrackets)
+                {
+                    // Escape the colon
+                    result.Append('\\');
+                }
+            }
+
+            result.Append(c);
+        }
+
+        return result.ToString();
+    }
+
     public required string RawText { get; init; }
 
     public required ITokenizeLineResult TokenizeResult { get; init; }
@@ -239,11 +313,10 @@ public record Prompt
                 "lora" => PromptExtraNetworkType.Lora,
                 "lyco" => PromptExtraNetworkType.LyCORIS,
                 "embedding" => PromptExtraNetworkType.Embedding,
-                _
-                    => throw PromptValidationError.Network_UnknownType(
-                        currentToken.StartIndex,
-                        GetSafeEndIndex(currentToken.EndIndex)
-                    )
+                _ => throw PromptValidationError.Network_UnknownType(
+                    currentToken.StartIndex,
+                    GetSafeEndIndex(currentToken.EndIndex)
+                ),
             };
 
             // Skip colon token
@@ -291,8 +364,8 @@ public record Prompt
                 var localModelList = indexService.ModelIndex.GetOrAdd(
                     parsedNetworkType.ConvertTo<SharedFolderType>()
                 );
-                var localModel = localModelList.FirstOrDefault(
-                    m => Path.GetFileNameWithoutExtension(m.FileName) == modelName
+                var localModel = localModelList.FirstOrDefault(m =>
+                    Path.GetFileNameWithoutExtension(m.FileName) == modelName
                 );
                 if (localModel == null)
                 {
@@ -403,7 +476,7 @@ public record Prompt
                     {
                         Type = parsedNetworkType,
                         Name = modelName,
-                        ModelWeight = weight
+                        ModelWeight = weight,
                     }
                 );
             }
@@ -428,11 +501,10 @@ public record Prompt
                 ", ",
                 token
                     .Scopes.Where(s => s != "source.prompt")
-                    .Select(
-                        s =>
-                            s.EndsWith(".prompt")
-                                ? s.Remove(s.LastIndexOf(".prompt", StringComparison.Ordinal))
-                                : s
+                    .Select(s =>
+                        s.EndsWith(".prompt")
+                            ? s.Remove(s.LastIndexOf(".prompt", StringComparison.Ordinal))
+                            : s
                     )
             );
 
@@ -453,7 +525,7 @@ public record Prompt
         {
             RawText = text,
             TokenizeResult = result,
-            Tokenizer = tokenizer
+            Tokenizer = tokenizer,
         };
     }
 }

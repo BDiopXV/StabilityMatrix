@@ -62,7 +62,27 @@ public static class Program
         SetDebugBuild();
 
         RedirectAvaloniaStylingResolution();
-        LibVLCSharp.Shared.Core.Initialize();
+
+        // Initialize LibVLC with explicit path to handle published exe scenarios
+        // Wrapped in try-catch to prevent app crash if LibVLC is not available
+        try
+        {
+            var libVlcPath = Path.Combine(AppContext.BaseDirectory, "libvlc", "win-x64");
+            if (Directory.Exists(libVlcPath))
+            {
+                LibVLCSharp.Shared.Core.Initialize(libVlcPath);
+            }
+            else
+            {
+                // Fallback to auto-detection
+                LibVLCSharp.Shared.Core.Initialize();
+            }
+        }
+        catch (Exception ex)
+        {
+            // LibVLC initialization failed - video features will be disabled
+            Console.Error.WriteLine($"LibVLC initialization failed: {ex.Message}");
+        }
 
         var parseResult = Parser
             .Default.ParseArguments<AppArgs>(args)
